@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,6 +41,10 @@ struct recovery_message {
 	char recovery[1024];
 };
 
+struct save_log_message {
+	unsigned flags[2];
+	unsigned length;
+};
 
 struct update_header {
 	unsigned char MAGIC[UPDATE_MAGIC_SIZE];
@@ -71,6 +75,8 @@ int read_update_header_for_bootloader(struct update_header *header);
 int update_firmware_image (struct update_header *header, char *name);
 
 int recovery_init (void);
+
+int save_debug_message(void);
 
 extern unsigned boot_into_recovery;
 

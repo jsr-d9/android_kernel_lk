@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -43,10 +43,17 @@
 #include "recovery.h"
 #include "bootimg.h"
 #include "smem.h"
+#include <config.h>
 
 #define BOOT_FLAGS	1
 #define UPDATE_STATUS	2
 #define ROUND_TO_PAGE(x,y) (((x) + (y)) & (~(y)))
+
+#if WITH_DEBUG_GLOBAL_RAM
+extern char print_buf[];
+extern unsigned int print_idx;
+#define MISC_SKIP_BYTE 10240
+#endif
 
 static const int MISC_PAGES = 3;			// number of pages to save
 static const int MISC_COMMAND_PAGE = 1;		// bootloader command is this page
@@ -55,6 +62,7 @@ unsigned boot_into_recovery = 0;
 
 extern void reset_device_info();
 extern void set_device_root();
+extern int target_is_emmc_boot(void);
 
 int get_recovery_message(struct recovery_message *out)
 {
@@ -82,6 +90,84 @@ int get_recovery_message(struct recovery_message *out)
 		return -1;
 	}
 	memcpy(out, buf, sizeof(*out));
+	return 0;
+}
+int save_debug_message(void)
+{
+
+#if WITH_DEBUG_GLOBAL_RAM
+	unsigned n = 0;
+	struct save_log_message save_log_cookie;
+
+	if (target_is_emmc_boot()) {
+		char *ptn_name = "misc";
+		unsigned long long ptn_offset = 0;
+		unsigned int index;
+
+		index = partition_get_index((unsigned char *) ptn_name);
+
+		if(INVALID_PTN == index) {
+			dprintf(CRITICAL, "ERROR: Partition index not found\n");
+			return -1;
+		}
+
+		ptn_offset = partition_get_offset(index); 
+
+		dprintf(INFO, "INFO: save the lk log to misc\n");
+		save_log_cookie.flags[0] = 0x6e616670;
+		save_log_cookie.flags[1] = 0x676f6c67;
+		save_log_cookie.length = print_idx;
+
+		memset((void*)SCRATCH_ADDR, 0, 512);
+		memcpy((void*)SCRATCH_ADDR,(void*)&save_log_cookie, sizeof(struct save_log_message));
+
+		/*Save cookie*/
+		if (mmc_write(ptn_offset + MISC_SKIP_BYTE, 512, (void *)SCRATCH_ADDR)) {
+			dprintf(CRITICAL, "ERROR: flash write fail!\n");
+			return -1;
+		}
+		memcpy((void*)SCRATCH_ADDR ,(void *)print_buf, save_log_cookie.length);
+		arch_disable_cache(UCACHE);
+		n = ( save_log_cookie.length / 512 + 1) * 512; 
+
+		if (mmc_write(ptn_offset + MISC_SKIP_BYTE + 512, n, (void *)SCRATCH_ADDR)) {
+			dprintf(CRITICAL, "ERROR: flash write fail!\n");
+			return -1;
+		}
+	}else{
+		struct ptentry *ptn;
+		struct ptable *ptable;
+		unsigned offset = 0;
+		unsigned pagesize = flash_page_size();
+		unsigned pagemask = pagesize -1;
+
+		ptable = flash_get_ptable();
+
+		if (ptable == NULL) {
+			dprintf(CRITICAL, "ERROR: Partition table not found\n");
+			return -1;
+		}
+		ptn = ptable_find(ptable, "FOTA");
+
+		if (ptn == NULL) {
+			dprintf(CRITICAL, "ERROR: No misc partition found\n");
+			return -1;
+		}
+		dprintf(INFO, "INFO: save the lk log to misc\n");
+		save_log_cookie.flags[0] = 0x6e616670;
+		save_log_cookie.flags[1] = 0x676f6c67;
+		save_log_cookie.length = print_idx;
+
+		memcpy((void*)SCRATCH_ADDR,(void*)&save_log_cookie, sizeof(struct save_log_message));
+		memcpy((void*)SCRATCH_ADDR + sizeof(struct save_log_message),(void *)print_buf, save_log_cookie.length);
+		arch_disable_cache(UCACHE);
+		n = ((sizeof(struct save_log_message) + save_log_cookie.length )/pagesize + 1) * pagesize; 
+		if (flash_write(ptn, 0, (void *)SCRATCH_ADDR, n)) {
+			dprintf(CRITICAL, "ERROR: flash write fail!\n");
+			return -1;
+		}
+	}
+#endif
 	return 0;
 }
 

@@ -1464,6 +1464,8 @@ void aboot_init(const struct app_descriptor *app)
 			#endif
 			}
 		}
+
+		save_debug_message();
 		boot_linux_from_mmc();
 	}
 	else
@@ -1473,6 +1475,7 @@ void aboot_init(const struct app_descriptor *app)
 	if((device.is_unlocked) || (device.is_tampered))
 		set_tamper_flag(device.is_tampered);
 #endif
+		save_debug_message();
 		boot_linux_from_flash();
 	}
 	dprintf(CRITICAL, "ERROR: Could not do normal boot. Reverting "
@@ -1491,11 +1494,13 @@ fastboot:
 	{
 		fastboot_register("flash:", cmd_flash_mmc);
 		fastboot_register("erase:", cmd_erase_mmc);
+		save_debug_message();
 	}
 	else
 	{
 		fastboot_register("flash:", cmd_flash);
 		fastboot_register("erase:", cmd_erase);
+		save_debug_message();
 	}
 
 	fastboot_register("continue", cmd_continue);
