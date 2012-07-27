@@ -33,6 +33,8 @@
 extern "C" {
 #endif
 
+#define DEBUG 2
+
 #if defined(DEBUG)
 #define DEBUGLEVEL DEBUG
 #else

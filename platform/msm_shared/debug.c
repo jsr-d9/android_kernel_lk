@@ -36,6 +36,14 @@
 #include <dev/fbcon.h>
 #include <dev/uart.h>
 
+#define WITH_DEBUG_GLOBAL_RAM 1
+
+#if WITH_DEBUG_GLOBAL_RAM
+#define PRINT_BUFF_SIZE	(128 * 1024)
+char print_buf[PRINT_BUFF_SIZE];
+unsigned int print_idx = 0;
+#endif
+
 void _dputc(char c)
 {
 #if WITH_DEBUG_DCC
@@ -52,6 +60,14 @@ void _dputc(char c)
 #endif
 #if WITH_DEBUG_JTAG
 	jtag_dputc(c);
+#endif
+
+#if WITH_DEBUG_GLOBAL_RAM
+	print_buf[print_idx] = c;
+	print_idx++;
+	if (print_idx >= PRINT_BUFF_SIZE) {
+		print_idx = 0;
+	}
 #endif
 }
 
