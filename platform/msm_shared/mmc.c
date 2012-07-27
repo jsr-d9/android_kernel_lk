@@ -2472,6 +2472,7 @@ mmc_boot_fifo_data_transfer(unsigned int *data_ptr,
 			    unsigned int data_len, unsigned char direction)
 {
 	unsigned int mmc_ret = MMC_BOOT_E_SUCCESS;
+	uint32_t sptr = arm_mmu_virt2phy((unsigned)data_ptr);
 
 #if MMC_BOOT_ADM
 	adm_result_t ret;
@@ -2484,7 +2485,7 @@ mmc_boot_fifo_data_transfer(unsigned int *data_ptr,
 	}
 
 	ret = adm_transfer_mmc_data(mmc_slot,
-				    (unsigned char *)data_ptr, data_len,
+				    (unsigned char *)sptr, data_len,
 				    adm_dir);
 
 	if (ret != ADM_RESULT_SUCCESS) {
@@ -2494,9 +2495,9 @@ mmc_boot_fifo_data_transfer(unsigned int *data_ptr,
 #else
 
 	if (direction == MMC_BOOT_DATA_READ) {
-		mmc_ret = mmc_boot_fifo_read(data_ptr, data_len);
+		mmc_ret = mmc_boot_fifo_read(sptr, data_len);
 	} else {
-		mmc_ret = mmc_boot_fifo_write(data_ptr, data_len);
+		mmc_ret = mmc_boot_fifo_write(sptr, data_len);
 	}
 #endif
 	return mmc_ret;

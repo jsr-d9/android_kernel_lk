@@ -59,6 +59,11 @@ void arm_mmu_map_section(addr_t paddr, addr_t vaddr, uint flags)
 	arm_invalidate_tlb();
 }
 
+uint32_t arm_mmu_virt2phy(uint32_t virt_addr)
+{
+	return (tt[virt_addr >> 20] & 0xfff00000) + (virt_addr & 0xfffff);
+}
+
 void arm_mmu_init(void)
 {
 	int i;

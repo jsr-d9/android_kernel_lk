@@ -30,6 +30,7 @@ extern "C" {
 #endif
 
 void arm_mmu_init(void);
+uint32_t arm_mmu_virt2phy(uint32_t virt_addr);
 
 #if defined(ARM_ISA_ARMV6) | defined(ARM_ISA_ARMV7)
 

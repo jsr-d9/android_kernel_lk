@@ -41,6 +41,8 @@
 #include <dev/fbcon.h>
 #include <dev/gpio.h>
 #include <smem.h>
+#include <mmu.h>
+#include <arch/arm/mmu.h>
 
 static struct fbcon_config *fb_config;
 
@@ -60,6 +62,44 @@ unsigned board_msm_id(void);
 
 static int target_uses_qgic;
 int debug_timer = 0, gpt_timer = 0, usb_hs_int = 0;
+#define MB (1024*1024)
+
+/* LK memory - cacheable, write through */
+#define ALL_MEMORY         (MMU_MEMORY_TYPE_STRONGLY_ORDERED | \
+				    MMU_MEMORY_AP_READ_WRITE)
+
+#define CS0_MEMORY_PSTART   (0x00000000)
+#define CS0_MEMORY_VSTART   (0x00000000)
+#define CS0_MEMORY_SIZE     (0x10000000)
+#define CS1_MEMORY_PSTART   (0x20000000)
+#define CS1_MEMORY_VSTART   (0x10000000)
+#define CS1_MEMORY_SIZE	    (0x10000000 - 0x4000000)
+
+mmu_section_t mmu_section_table[] = {
+	/*  Physical addr,    Virtual addr,    Size (in MB),    Flags */
+    {CS0_MEMORY_PSTART, CS0_MEMORY_VSTART, (CS0_MEMORY_SIZE/MB),    ALL_MEMORY},
+    {CS1_MEMORY_PSTART, CS1_MEMORY_VSTART, (CS1_MEMORY_SIZE/MB),    ALL_MEMORY},
+};
+
+/* Setup memory for this platform */
+void platform_init_mmu_mappings(void)
+{
+    uint32_t i;
+    uint32_t sections;
+    uint32_t table_size = ARRAY_SIZE(mmu_section_table);
+
+    for (i = 0; i < table_size; i++)
+    {
+        sections = mmu_section_table[i].num_of_sections;
+
+        while (sections--)
+        {
+            arm_mmu_map_section(mmu_section_table[i].paddress + sections*MB,
+                                mmu_section_table[i].vaddress + sections*MB,
+                                mmu_section_table[i].flags);
+        }
+    }
+}
 
 void platform_early_init(void)
 {

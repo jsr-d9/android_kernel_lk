@@ -3499,11 +3499,11 @@ flash_write(struct ptentry *ptn, unsigned extra_per_page, const void *data,
 
 		if (extra_per_page) {
 			r = _flash_write_page(flash_cmdlist, flash_ptrlist,
-					      page, image,
-					      image + flash_pagesize);
+					      page, arm_mmu_virt2phy(image),
+					      arm_mmu_virt2phy(image + flash_pagesize));
 		} else {
 			r = _flash_write_page(flash_cmdlist, flash_ptrlist,
-					      page, image, spare);
+					      page, arm_mmu_virt2phy(image), spare);
 		}
 		if (r) {
 			dprintf(INFO,

@@ -260,7 +260,7 @@ int udc_request_queue(struct udc_endpoint *ept, struct udc_request *_req)
 {
 	struct usb_request *req = (struct usb_request *)_req;
 	struct ept_queue_item *item = req->item;
-	unsigned phys = (unsigned)req->req.buf;
+	uint32_t phys = arm_mmu_virt2phy((uint32_t)req->req.buf);
 
 	item->next = TERMINATE;
 	item->info = INFO_BYTES(req->req.length) | INFO_IOC | INFO_ACTIVE;
