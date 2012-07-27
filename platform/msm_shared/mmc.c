@@ -2742,6 +2742,7 @@ static unsigned int mmc_boot_send_erase(struct mmc_boot_card *card)
 /*
  * Function to erase data on the eMMC card
  */
+#define DEFAULT_ERASE_SECTORS	8
 unsigned int
 mmc_erase_card(unsigned long long data_addr, unsigned long long size)
 {
@@ -2749,7 +2750,7 @@ mmc_erase_card(unsigned long long data_addr, unsigned long long size)
 	unsigned long long erase_grp_size;
 	unsigned long long data_end = 0x00000000;
 	unsigned long long loop_count;
-	unsigned int out[512] = { 0 };
+	unsigned int out[512 * DEFAULT_ERASE_SECTORS] = { 0 };
 
 	/* Converting size to sectors */
 	size = size / 512;
@@ -2778,7 +2779,7 @@ mmc_erase_card(unsigned long long data_addr, unsigned long long size)
 	 0 is written to the first block of the partition.
 	 */
 	if (loop_count < 1) {
-		mmc_ret = mmc_write(data_addr, 512, (unsigned int *)out);
+		mmc_ret = mmc_write(data_addr, 512 * DEFAULT_ERASE_SECTORS, (unsigned int *)out);
 		if (mmc_ret != MMC_BOOT_E_SUCCESS)
 			return mmc_ret;
 		else
