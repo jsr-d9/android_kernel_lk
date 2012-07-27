@@ -12,7 +12,17 @@ BASE_ADDR        := 0x00200000
 TAGS_ADDR        := BASE_ADDR+0x00000100
 KERNEL_ADDR      := BASE_ADDR+0x00008000
 RAMDISK_ADDR     := BASE_ADDR+0x01000000
-SCRATCH_ADDR     := BASE_ADDR+0x000A0000
+
+#
+# To fix DMA failure in 256MB position, the SCRATCH_ADDR need to
+# align to nand flash page size(8KB page + 256B spare) ,EMMC page size(512B),
+# USB download package size(16KB)
+# Then we have the below equation.
+# 256*1024*1024 = (8*1024 + 256)*64*X + SCRATCH_ADDR
+# Let X = 474, then we get
+# SCRATCH_ADDR = 0xB98000
+#
+SCRATCH_ADDR     := 0xB98000
 
 KEYS_USE_GPIO_KEYPAD := 1
 
