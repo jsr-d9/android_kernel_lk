@@ -101,6 +101,14 @@ static const unsigned short halibut_keymap_evb[ARRAY_SIZE(halibut_col_gpios_evb)
 	[KEYMAP_INDEX_EVB(0, 1)] = KEY_VOLUMEDOWN,
 };
 
+static const unsigned short halibut_keymap_qrd5[ARRAY_SIZE(halibut_col_gpios_evb)
+					       *
+					       ARRAY_SIZE
+					       (halibut_row_gpios_evb)] = {
+	[KEYMAP_INDEX_EVB(0, 0)] = KEY_VOLUMEDOWN,
+	[KEYMAP_INDEX_EVB(0, 1)] = KEY_VOLUMEUP,
+};
+
 static struct gpio_keypad_info halibut_keypad_info_surf = {
 	.keymap = halibut_keymap,
 	.output_gpios = halibut_row_gpios,
@@ -136,9 +144,12 @@ static struct gpio_keypad_info halibut_keypad_info_evb = {
 
 void keypad_init(void)
 {
+	if (machine_is_qrd5() || machine_is_qrd5a())
+		halibut_keypad_info_evb.keymap = halibut_keymap_qrd5;
+
 	if (machine_is_qrd())
 		gpio_keypad_init(&halibut_keypad_info_qrd);
-	else if (machine_is_evb())
+	else if (machine_is_evb() || machine_is_qrd5() || machine_is_skua() || machine_is_qrd5a())
 		gpio_keypad_init(&halibut_keypad_info_evb);
 	else
 		gpio_keypad_init(&halibut_keypad_info_surf);
