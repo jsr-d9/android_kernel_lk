@@ -48,6 +48,13 @@
 #define GPIO_PULLUP	0x0100
 #define GPIO_PULLDOWN	0x0200
 
+#define GPIO_CFG(gpio, func, dir, pull, drvstr)\
+	((((gpio) & 0x3ff) << 4)  | \
+	((func) & 0xf)            | \
+	(((dir) & 0x1) << 14)     | \
+	(((pull) & 0x3) << 15)    | \
+	(((drvstr) & 0xf) << 17))
+
 int gpio_config(unsigned nr, unsigned flags);
 void gpio_set(unsigned nr, unsigned on);
 int gpio_get(unsigned nr);

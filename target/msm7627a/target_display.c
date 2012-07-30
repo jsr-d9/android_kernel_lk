@@ -98,7 +98,7 @@ void display_init(void)
 		break;
 	case MSM7X27A_EVB:
 	case MSM8X25_EVB:
-	case MSM8X25_EVT:
+	case MSM8X25_QRD5:
 #if MIPI_VIDEO_MODE
 		mipi_nt35510_video_wvga_init(&(panel.panel_info));
 #else
@@ -113,7 +113,7 @@ void display_init(void)
 		panel.fb.bpp =  panel.panel_info.bpp;
 		panel.fb.format = FB_FORMAT_RGB888;
 		panel.mdp_rev = MDP_REV_303;
-		if (mach_type == MSM8X25_EVT)
+		if (mach_type == MSM8X25_QRD5)
 			panel.rotate = 1;
 		break;
 	default:

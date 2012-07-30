@@ -43,6 +43,44 @@
 #include <platform.h>
 #include <crypto_hash.h>
 
+
+/* chip information */
+#define MSM7XXX_BASE MSM7225A
+char* target_arch[] = {
+	[MSM7225A - MSM7XXX_BASE]	= "7225A",  /*MSM7225A */
+	[MSM7625A - MSM7XXX_BASE]	= "7625A",  /*MSM7625A */
+	[MSM7227A - MSM7XXX_BASE]	= "7227A",  /*MSM7227A */
+	[MSM7627A - MSM7XXX_BASE]	= "7627A",  /*MSM7627A */
+	[ESM7227A - MSM7XXX_BASE]	= "7227A",  /*ESM7227A */
+	[ESM7225A - MSM7XXX_BASE]	= "7225A",  /*ESM7225A */
+	[ESM7627A - MSM7XXX_BASE]	= "7627A",  /*ESM7627A */
+	[MSM7225AA - MSM7XXX_BASE]	= "7225AA", /*MSM7225AA*/
+	[MSM7625AA - MSM7XXX_BASE]	= "7625AA", /*MSM7625AA*/
+	[ESM7225AA - MSM7XXX_BASE]	= "7225AA", /*ESM7225AA*/
+	[MSM7227AA - MSM7XXX_BASE]	= "7227AA", /*MSM7227AA*/
+	[MSM7627AA - MSM7XXX_BASE]	= "7627AA", /*MSM7627AA*/
+	[ESM7227AA - MSM7XXX_BASE]	= "7227AA", /*ESM7227AA*/
+	[APQ8064  - MSM7XXX_BASE]	= "APQ8064" ,
+	[MSM8930  - MSM7XXX_BASE]	= "MSM8930" ,
+	[MSM8630  - MSM7XXX_BASE]	= "MSM8630" ,
+	[MSM8230  - MSM7XXX_BASE]	= "MSM8230" ,
+	[APQ8030  - MSM7XXX_BASE]	= "APQ8030" ,
+	[MSM8627  - MSM7XXX_BASE]	= "MSM8627" ,
+	[MSM8227  - MSM7XXX_BASE]	= "MSM8227" ,
+	[MSM8660A - MSM7XXX_BASE]	= "MSM8660A" ,
+	[MSM8260A - MSM7XXX_BASE]	= "MSM8260A" ,
+	[APQ8060A - MSM7XXX_BASE]	= "APQ8060A" ,
+	[MSM8225  - MSM7XXX_BASE]	= "MSM8225" ,
+	[MSM8625  - MSM7XXX_BASE]	= "MSM8625" ,
+	[MPQ8064  - MSM7XXX_BASE]	= "MPQ8064" ,
+
+};
+#define BOARD_NAME(target_id, board_id) \
+do {\
+	strcpy(target_board_name, target_arch[target_id - MSM7XXX_BASE]);\
+	strcat(target_board_name, board_id);\
+} while (0)
+
 #define VARIABLE_LENGTH		0x10101010
 #define DIFF_START_ADDR		0xF0F0F0F0
 #define NUM_PAGES_PER_BLOCK	0x40
@@ -51,6 +89,7 @@
 
 unsigned int fota_cookie[1];
 
+static char target_board_name[13];
 static struct ptable flash_ptable;
 unsigned hw_platform = 0;
 unsigned target_msm_id = 0;
@@ -66,7 +105,8 @@ unsigned msm_version = 0;
 static crypto_engine_type platform_ce_type = CRYPTO_ENGINE_TYPE_SW;
 
 int machine_is_evb();
-
+int machine_is_qrd5();
+int machine_is_skua();
 /* for these partitions, start will be offset by either what we get from
  * smem, or from the above offset if smem is not useful. Also, we should
  * probably have smem_ptable code populate our flash_ptable.
@@ -144,8 +184,11 @@ void target_init(void)
 
 	/* Display splash screen if enabled */
 #if DISPLAY_SPLASH_SCREEN
-	display_init();
-	dprintf(SPEW, "Diplay initialized\n");
+	if (!machine_is_qrd7() && !machine_is_skua() && !machine_is_skub() && 
+		!machine_is_qrd5a()) {
+		display_init();
+		dprintf(SPEW, "Diplay initialized\n");
+	}
 #endif
 
 	if (target_is_emmc_boot()) {
@@ -246,21 +289,38 @@ void board_info(void)
 			switch (id) {
 			case 0x1:
 				hw_platform = MSM8X25_SURF;
+				BOARD_NAME(target_msm_id, "SURF");
 				break;
 			case 0x2:
 				hw_platform = MSM8X25_FFA;
+				BOARD_NAME(target_msm_id, "FFA");
 				break;
 			case 0x10:
-				hw_platform = MSM8X25_EVT;
+			case 0x60000000:
+			/* Linux kernel use the id as the array index, change 0x60000000 to 0xA2 */
+			case 0xA2:
+				hw_platform = MSM8X25_QRD5;
+				BOARD_NAME(target_msm_id, "QRD5");
 				break;
 			case 0xC:
 				hw_platform = MSM8X25_EVB;
+				BOARD_NAME(target_msm_id, "EVB");
+				break;
+			case 0xA0:
+				hw_platform = MSM8X25_SKUA;
+				BOARD_NAME(target_msm_id, "SKUA");
+				break;
+			case 0xA6:
+				hw_platform = MSM8X25_SKUB;
+				BOARD_NAME(target_msm_id, "SKUB");
 				break;
 			case 0xF:
 				hw_platform = MSM8X25_QRD7;
+				BOARD_NAME(target_msm_id, "QRD7");
 				break;
 			default:
 				hw_platform = MSM8X25_SURF;
+				BOARD_NAME(target_msm_id, "SURF");
 			}
 		} else {
 			switch (id) {
@@ -270,30 +330,39 @@ void board_info(void)
 					hw_platform = MSM7X25A_SURF;
 				else
 					hw_platform = MSM7X27A_SURF;
+					BOARD_NAME(target_msm_id, "SURF");
 				break;
 			case 0x2:
 				if (msm_is_7x25a(target_msm_id))
 					hw_platform = MSM7X25A_FFA;
 				else
 					hw_platform = MSM7X27A_FFA;
+					BOARD_NAME(target_msm_id, "FFA");
 				break;
 			case 0xB:
 				if(target_is_emmc_boot())
 					hw_platform = MSM7X27A_QRD1;
-				else
+					BOARD_NAME(target_msm_id, "QRD1");
 					hw_platform = MSM7X27A_QRD3;
 				break;
 			case 0xC:
 				hw_platform = MSM7X27A_EVB;
+				BOARD_NAME(target_msm_id, "EVB");
 				break;
 			case 0xF:
 				hw_platform = MSM7X27A_QRD3;
+				BOARD_NAME(target_msm_id, "QRD3");
+				break;
+			case 0xA2:
+				hw_platform = MSM7X27A_QRD5A;
+				BOARD_NAME(target_msm_id, "QRD5A");
 				break;
 			default:
 				if (msm_is_7x25a(target_msm_id))
 					hw_platform = MSM7X25A_SURF;
 				else
 					hw_platform = MSM7X27A_SURF;
+				BOARD_NAME(target_msm_id, "SURF");
 			};
 		}
 		/* Set msm ID for target variants based on values read from smem */
@@ -319,6 +388,8 @@ void board_info(void)
 			target_msm_id = MSM7627A;
 		}
 	}
+	dprintf(INFO, "LK:hardware_id %d,hw_platform %d, target_msm_id %d\n",
+		id, hw_platform, target_msm_id);
 	return;
 }
 
@@ -501,7 +572,10 @@ void target_serialno(unsigned char *buf)
 {
 	unsigned int serialno;
 	serialno = mmc_get_psn();
-	sprintf(buf, "%x", serialno);
+	if(target_board_name[0] != '\0')
+		sprintf(buf, "%s", target_board_name);
+	else
+		sprintf(buf, "%x", serialno);
 }
 
 int emmc_recovery_init(void)
@@ -509,6 +583,14 @@ int emmc_recovery_init(void)
 	int rc;
 	rc = _emmc_recovery_init();
 	return rc;
+}
+#else
+void target_serialno(unsigned char *buf)
+{
+	if(target_board_name[0] != '\0')
+		sprintf(buf, "%s", target_board_name);
+	else
+		sprintf(buf, "%s", "UNKNOW3");
 }
 #endif
 
@@ -520,7 +602,7 @@ int machine_is_evb()
 	switch(mach_type) {
 		case MSM7X27A_EVB:
 		case MSM8X25_EVB:
-		case MSM8X25_EVT:
+		case MSM8X25_QRD5:
 			ret = 1;
 			break;
 		default:
@@ -528,6 +610,79 @@ int machine_is_evb()
 	}
 	return ret;
 }
+
+int machine_is_qrd5()
+{
+	if (board_machtype() == MSM8X25_QRD5)
+		return 1;
+	else
+		return 0;
+}
+
+int machine_is_qrd7()
+{
+	if (board_machtype() == MSM8X25_QRD7)
+		return 1;
+	else
+		return 0;
+}
+
+int machine_is_qrd5a()
+{
+	if (board_machtype() == MSM7X27A_QRD5A)
+		return 1;
+	else
+		return 0;
+}
+
+int machine_is_skub()
+{
+	int ret = 0;
+	unsigned mach_type = board_machtype();
+
+	switch(mach_type) {
+		case MSM8X25_SKUB:
+			ret = 1;
+			break;
+		default:
+			ret = 0;
+	}
+	return ret;
+}
+
+int machine_is_skua()
+{
+	int ret = 0;
+	unsigned mach_type = board_machtype();
+
+	switch(mach_type) {
+		case MSM8X25_SKUA:
+			ret = 1;
+			break;
+		default:
+			ret = 0;
+	}
+	return ret;
+}
+
+int machine_is_7x27a_surf_ffa()
+{
+	int ret = 0;
+	unsigned mach_type = board_machtype();
+
+	switch(mach_type) {
+		case MSM7X27A_FFA:
+		case MSM7X27A_SURF:
+		case MSM7X25A_SURF:
+		case MSM7X25A_FFA:
+			ret = 1;
+			break;
+		default:
+			ret = 0;
+	}
+	return ret;
+}
+
 int machine_is_qrd()
 {
 	int ret = 0;
@@ -536,6 +691,8 @@ int machine_is_qrd()
 	switch(mach_type) {
 		case MSM7X27A_QRD1:
 		case MSM7X27A_QRD3:
+		case MSM8X25_QRD5:
+		case MSM8X25_QRD5A:
 		case MSM8X25_QRD7:
 			ret = 1;
 			break;
@@ -544,6 +701,7 @@ int machine_is_qrd()
 	}
 	return ret;
 }
+
 int machine_is_8x25()
 {
 	int ret = 0;
@@ -553,8 +711,10 @@ int machine_is_8x25()
 		case MSM8X25_SURF:
 		case MSM8X25_FFA:
 		case MSM8X25_EVB:
-		case MSM8X25_EVT:
+		case MSM8X25_QRD5:
+		case MSM8X25_SKUA:
 		case MSM8X25_QRD7:
+		case MSM8X25_SKUB:
 			ret = 1;
 			break;
 		default:
