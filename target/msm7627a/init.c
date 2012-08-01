@@ -555,11 +555,23 @@ static unsigned target_check_power_on_reason(void)
 
 	return power_on_status;
 }
+static int enable_poweroff_charging = 1;
+void disable_poweroff_charging()
+{
+	enable_poweroff_charging = 0;
+}
+
+int is_poweroff_charging_enabled()
+{
+	return enable_poweroff_charging;
+}
 
 unsigned target_pause_for_battery_charge(void)
 {
-	if (target_check_power_on_reason() == PWR_ON_EVENT_WALL_CHG)
-		return 1;
+	if (target_check_power_on_reason() == PWR_ON_EVENT_FTM)
+		return PWR_ON_EVENT_FTM;
+	if (target_check_power_on_reason() == PWR_ON_EVENT_USB_CHG && is_poweroff_charging_enabled())
+		return PWR_ON_EVENT_USB_CHG;
 	return 0;
 }
 
@@ -691,8 +703,6 @@ int machine_is_qrd()
 	switch(mach_type) {
 		case MSM7X27A_QRD1:
 		case MSM7X27A_QRD3:
-		case MSM8X25_QRD5:
-		case MSM8X25_QRD5A:
 		case MSM8X25_QRD7:
 			ret = 1;
 			break;

@@ -366,6 +366,7 @@ struct smem_ram_ptable {
 #define PWR_ON_EVENT_RTC_ALARM 0x2
 #define PWR_ON_EVENT_USB_CHG   0x20
 #define PWR_ON_EVENT_WALL_CHG  0x40
+#define PWR_ON_EVENT_FTM  0x80
 
 unsigned smem_read_alloc_entry_offset(smem_mem_type_t type, void *buf, int len,
 				      int offset);

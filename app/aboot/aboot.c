@@ -107,6 +107,11 @@ static const char *emmc_cmdline = " androidboot.emmc=true";
 static const char *usb_sn_cmdline = " androidboot.serialno=";
 static const char *battchg_pause = " androidboot.mode=charger";
 static const char *auth_kernel = " androidboot.authorized_kernel=true";
+static const char *boot_up_mode_normal   = " androidboot.bootupmode=normal";
+static const char *boot_up_mode_recovery   = " androidboot.bootupmode=recovery";
+static const char *boot_up_mode_ftm   = " androidboot.bootupmode=ftm";
+static const char *reboot_mode_normal = " reboot=h";
+static const char *reboot_mode_recovery = " reboot=i";
 
 static const char *baseband_apq     = " androidboot.baseband=apq";
 static const char *baseband_msm     = " androidboot.baseband=msm";
@@ -188,7 +193,20 @@ unsigned char *update_cmdline(const char * cmdline)
 	cmdline_len += strlen(usb_sn_cmdline);
 	cmdline_len += strlen(sn_buf);
 
-	if (target_pause_for_battery_charge()) {
+	if(target_pause_for_battery_charge() == PWR_ON_EVENT_FTM)
+		cmdline_len += strlen(boot_up_mode_ftm);
+	else if(!boot_into_recovery)
+	{
+		cmdline_len += strlen(boot_up_mode_normal);
+		cmdline_len += strlen(reboot_mode_normal);
+	}
+	else{
+		cmdline_len += strlen(boot_up_mode_recovery);
+		cmdline_len += strlen(reboot_mode_recovery);
+
+	}
+
+	if (target_pause_for_battery_charge() == PWR_ON_EVENT_USB_CHG) {
 		pause_at_bootup = 1;
 		cmdline_len += strlen(battchg_pause);
 	}
@@ -301,6 +319,36 @@ unsigned char *update_cmdline(const char * cmdline)
 				if (have_cmdline) --dst;
 				while ((*dst++ = *src++));
 				break;
+		}
+		if(target_pause_for_battery_charge() == PWR_ON_EVENT_FTM)
+		{
+			src = boot_up_mode_ftm;
+			if (have_cmdline) --dst;
+			while ((*dst++ = *src++));
+		}
+		else if (!boot_into_recovery)
+		{
+			src = boot_up_mode_normal;
+			if (have_cmdline) --dst;
+			while ((*dst++ = *src++));
+		}
+		else
+		{
+			src = boot_up_mode_recovery;
+			if (have_cmdline) --dst;
+			while ((*dst++ = *src++));
+		}
+		if (!boot_into_recovery)
+		{
+			src = reboot_mode_normal;
+			if (have_cmdline) --dst;
+			while ((*dst++ = *src++));
+		}
+		else
+		{
+			src = reboot_mode_recovery;
+			if (have_cmdline) --dst;
+			while ((*dst++ = *src++));
 		}
 	}
 	return cmdline_final;
@@ -417,6 +465,8 @@ void boot_linux(void *kernel, unsigned *tags,
 
 	dprintf(INFO, "booting linux @ %p, ramdisk @ %p (%d)\n",
 		kernel, ramdisk, ramdisk_size);
+	if (cmdline)
+		dprintf(INFO, "cmdline: %s\n", cmdline);
 
 	enter_critical_section();
 	/* do any platform specific cleanup before kernel entry */
@@ -1332,10 +1382,13 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 	fastboot_okay("");
 }
 
+void disable_poweroff_charging(void);
+
 void cmd_continue(const char *arg, void *data, unsigned sz)
 {
 	fastboot_okay("");
 	udc_stop();
+	disable_poweroff_charging();
 	if (target_is_emmc_boot())
 	{
 		boot_linux_from_mmc();
