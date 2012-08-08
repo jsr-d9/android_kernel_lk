@@ -520,6 +520,11 @@ int _emmc_recovery_init(void)
 	}
 	msg.command[sizeof(msg.command)-1] = '\0'; //Ensure termination
 
+    if (!strcmp("boot-recovery",msg.command))
+    {
+          boot_into_recovery = 1; // Boot in recovery mode
+	}
+
 	if (!strcmp("update-radio",msg.command))
 	{
 		/* We're now here due to radio update, so check for update status */
