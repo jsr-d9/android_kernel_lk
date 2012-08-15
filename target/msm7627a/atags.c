@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -32,6 +32,7 @@
 
 #define SIZE_1M			   0x00100000
 #define ROUND_TO_MB(x)		  ((x >> 20) << 20)
+extern int available_scratch_mem;
 
 unsigned *target_atag_mem(unsigned *ptr)
 {
@@ -70,5 +71,5 @@ unsigned *target_atag_mem(unsigned *ptr)
 
 unsigned target_get_max_flash_size(void)
 {
-    return (512 - 64) * 1024 * 1024 - SCRATCH_ADDR;
+    return available_scratch_mem;
 }

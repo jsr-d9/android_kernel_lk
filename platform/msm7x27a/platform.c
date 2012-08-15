@@ -62,43 +62,44 @@ unsigned board_msm_id(void);
 
 static int target_uses_qgic;
 int debug_timer = 0, gpt_timer = 0, usb_hs_int = 0;
+int available_scratch_mem = 0;
 #define MB (1024*1024)
-
+#define ROUND_TO_MB(x) ((x >> 20) << 20)
 /* LK memory - cacheable, write through */
 #define ALL_MEMORY         (MMU_MEMORY_TYPE_STRONGLY_ORDERED | \
 				    MMU_MEMORY_AP_READ_WRITE)
-
-#define CS0_MEMORY_PSTART   (0x00000000)
-#define CS0_MEMORY_VSTART   (0x00000000)
-#define CS0_MEMORY_SIZE     (0x10000000)
-#define CS1_MEMORY_PSTART   (0x20000000)
-#define CS1_MEMORY_VSTART   (0x10000000)
-#define CS1_MEMORY_SIZE	    (0x10000000 - 0x4000000)
-
-mmu_section_t mmu_section_table[] = {
-	/*  Physical addr,    Virtual addr,    Size (in MB),    Flags */
-    {CS0_MEMORY_PSTART, CS0_MEMORY_VSTART, (CS0_MEMORY_SIZE/MB),    ALL_MEMORY},
-    {CS1_MEMORY_PSTART, CS1_MEMORY_VSTART, (CS1_MEMORY_SIZE/MB),    ALL_MEMORY},
-};
 
 /* Setup memory for this platform */
 void platform_init_mmu_mappings(void)
 {
     uint32_t i;
     uint32_t sections;
-    uint32_t table_size = ARRAY_SIZE(mmu_section_table);
+    struct smem_ram_ptable ram_ptable;
+    uint32_t vaddress = 0;
 
-    for (i = 0; i < table_size; i++)
-    {
-        sections = mmu_section_table[i].num_of_sections;
+    if (smem_ram_ptable_init(&ram_ptable)) {
+        for (i = 0; i < ram_ptable.len; i++) {
+             if ((ram_ptable.parts[i].attr == READWRITE)
+                 && (ram_ptable.parts[i].domain == APPS_DOMAIN)
+                 && (ram_ptable.parts[i].start != 0x0)
+                 && (!(ram_ptable.parts[i].size < MB))) {
+                sections = ram_ptable.parts[i].size >> 20;
+                if (vaddress == 0) {
+                    vaddress = ROUND_TO_MB(ram_ptable.parts[i].start);
+                }
 
-        while (sections--)
-        {
-            arm_mmu_map_section(mmu_section_table[i].paddress + sections*MB,
-                                mmu_section_table[i].vaddress + sections*MB,
-                                mmu_section_table[i].flags);
+                while (sections--) {
+                    arm_mmu_map_section(ROUND_TO_MB(ram_ptable.parts[i].start) + sections*MB,
+                    vaddress + sections*MB, ALL_MEMORY);
+                }
+                vaddress += ROUND_TO_MB(ram_ptable.parts[i].size);
+                available_scratch_mem += ROUND_TO_MB(ram_ptable.parts[i].size);
+            }
         }
-    }
+    } else {
+        dprintf(CRITICAL, "ERROR: Unable to read RAM partition\n");
+        ASSERT(0);
+	}
 }
 
 void platform_early_init(void)
