@@ -40,6 +40,12 @@
 int mipi_nt35510_panel_dsi_config(int on)
 {
 	if (on) {
+                /* TODO: move these configs to MP to boost power on speed */
+                gpio_tlmm_config(GPIO_CFG(35, 0, 1, 0, 0), 0);
+                gpio_tlmm_config(GPIO_CFG(40, 0, 1, 0, 0), 0);
+                gpio_tlmm_config(GPIO_CFG(96, 0, 1, 0, 0), 0);
+                gpio_tlmm_config(GPIO_CFG(85, 0, 1, 0, 0), 0);
+
 		gpio_config(96, GPIO_OUTPUT);
 		/*
 		 * As per the specification follow the sequence to put lcd
