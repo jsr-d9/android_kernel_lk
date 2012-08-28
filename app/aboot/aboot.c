@@ -1112,10 +1112,10 @@ void cmd_erase(const char *arg, void *data, unsigned sz)
 
 
 #define DEFAULT_ERASE_SECTORS	8
+static unsigned int g_out[512 * DEFAULT_ERASE_SECTORS] = {0};
 void cmd_erase_mmc(const char *arg, void *data, unsigned sz)
 {
 	unsigned long long ptn = 0;
-	unsigned int out[512 * DEFAULT_ERASE_SECTORS] = {0};
 	int index = INVALID_PTN;
 
 	index = partition_get_index(arg);
@@ -1127,7 +1127,7 @@ void cmd_erase_mmc(const char *arg, void *data, unsigned sz)
 	}
 	/* Simple inefficient version of erase. Just writing
        0 in first block */
-	if (mmc_write(ptn , 512 * DEFAULT_ERASE_SECTORS, (unsigned int *)out)) {
+	if (mmc_write(ptn , 512 * DEFAULT_ERASE_SECTORS, (unsigned int *)g_out)) {
 		fastboot_fail("failed to erase partition");
 		return;
 	}
