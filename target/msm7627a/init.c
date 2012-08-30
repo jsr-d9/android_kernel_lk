@@ -94,6 +94,7 @@ static struct ptable flash_ptable;
 unsigned hw_platform = 0;
 unsigned target_msm_id = 0;
 unsigned msm_version = 0;
+unsigned platform_version = 0;
 
 /* Setting this variable to different values defines the
  * behavior of CE engine:
@@ -280,6 +281,8 @@ void board_info(void)
 				    board_info_v4.board_info_v3.msm_id;
 				msm_version =
 				    board_info_v4.board_info_v3.msm_version;
+                                platform_version =
+                                        board_info_v4.platform_version;
 			}
 		}
 
@@ -410,6 +413,12 @@ unsigned board_msm_version(void)
 	board_info();
 	msm_version = (msm_version & 0xffff0000) >> 16;
 	return msm_version;
+}
+
+unsigned board_hw_version(void)
+{
+        board_info();
+        return platform_version;
 }
 
 crypto_engine_type board_ce_type(void)

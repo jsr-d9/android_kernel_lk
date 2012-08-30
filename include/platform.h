@@ -20,8 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
+
+#define HW_VERSION(major, minor)  (((major) << 16) | (minor))
 
 time_t current_time(void);
 bigtime_t current_time_hires(void);

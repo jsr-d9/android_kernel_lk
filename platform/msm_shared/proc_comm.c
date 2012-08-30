@@ -126,6 +126,8 @@ enum {
 	PCOM_RPC_GPIO_TLMM_CONFIG_EX = 0x25,
 	PCOM_NUM_CMDS,
 	PCOM_KERNEL_SEC_BOOT = 0x7A,
+        PCOM_INIT_BACKLIGHT = 0x7C,
+        PCOM_SET_BACKLIGHT = 0x7D,
 };
 
 enum {
@@ -342,4 +344,14 @@ int vreg_disable(unsigned id)
 void set_tamper_flag(int tamper)
 {
 	return msm_proc_comm(PCOM_KERNEL_SEC_BOOT, &tamper, 0);
+}
+
+int pcom_init_backlight()
+{
+        return msm_proc_comm(PCOM_INIT_BACKLIGHT, 0, 0);
+}
+
+int pcom_set_backlight(int brightness)
+{
+        return msm_proc_comm(PCOM_SET_BACKLIGHT, &brightness, 0);
 }
