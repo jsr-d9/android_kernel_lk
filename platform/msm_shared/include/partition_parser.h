@@ -100,12 +100,18 @@
 
 #define MBR_ABOOT_TYPE            0x4C
 #define MBR_BOOT_TYPE             0x48
-#define MBR_SYSTEM_TYPE           0x82
-#define MBR_USERDATA_TYPE         0x83
+#define MBR_AP_CONFIG_TYPE        0x90
+#define MBR_LOGO_TYPE             0x91
+#define MBR_PERSIST_TYPE          0x92
+#define MBR_SYSTEM_TYPE           0x93
+#define MBR_CACHE_TYPE            0x94
+#define MBR_USERDATA_TYPE         0x95
 #define MBR_RECOVERY_TYPE         0x60
 #define MBR_MISC_TYPE             0x63
 #define MBR_PROTECTED_TYPE        0xEE
 #define MBR_SSD_TYPE              0x5D
+
+#define MBR_USERDATA_OLD_TYPE 	0x83
 
 #define GET_LLWORD_FROM_BYTE(x)    ((unsigned long long)*(x) | \
         ((unsigned long long)*(x+1) << 8) | \

@@ -31,8 +31,11 @@
 #include "mmc.h"
 #include "partition_parser.h"
 
+#define PLATFORM_JB 1
+#ifndef PLATFORM_JB
 char *ext3_partitions[] =
-    { "system", "userdata", "persist", "cache", "tombstones" };
+    { "persist", "system", "cache", "userdata", "tombstones" };
+#endif
 char *vfat_partitions[] = { "modem", "mdm", "NONE" };
 
 unsigned int ext3_count = 0;
@@ -785,7 +788,27 @@ mbr_fill_name(struct partition_entry *partition_ent, unsigned int type)
 	case MBR_EFS2_TYPE:
 		memcpy(partition_ent->name, "efs2", 4);
 		break;
+#ifdef PLATFORM_JB
+	case MBR_AP_CONFIG_TYPE:
+		memcpy(partition_ent->name, "apconfig", 8);
+		break;
+	case MBR_LOGO_TYPE:
+		memcpy(partition_ent->name, "logo", 4);
+		break;
+	case MBR_PERSIST_TYPE:
+		memcpy(partition_ent->name, "persist", 7);
+		break;
+	case MBR_SYSTEM_TYPE:
+		memcpy(partition_ent->name, "system", 6);
+		break;
+	case MBR_CACHE_TYPE:
+		memcpy(partition_ent->name, "cache", 5);
+		break;
 	case MBR_USERDATA_TYPE:
+		memcpy(partition_ent->name, "userdata", 8);
+		break;
+#else
+	case MBR_USERDATA_OLD_TYPE:
 		if (ext3_count == sizeof(ext3_partitions) / sizeof(char *))
 			return;
 		strlcpy((char *)partition_ent->name,
@@ -793,6 +816,7 @@ mbr_fill_name(struct partition_entry *partition_ent, unsigned int type)
 			sizeof(partition_ent->name));
 		ext3_count++;
 		break;
+#endif
 	case MBR_RECOVERY_TYPE:
 		memcpy(partition_ent->name, "recovery", 8);
 		break;
