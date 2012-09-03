@@ -105,11 +105,15 @@ int update_device_tree(const void *, char *, void *, unsigned);
 
 static const char *emmc_cmdline = " androidboot.emmc=true";
 static const char *usb_sn_cmdline = " androidboot.serialno=";
-static const char *battchg_pause = " androidboot.mode=charger";
+static const char *boot_up_mode_charger		   = " androidboot.mode=charger";
+static const char *boot_up_mode_fastmmi_pcba   = " androidboot.mode=fastmmi_pcba";
+static const char *boot_up_mode_fastmmi_full   = " androidboot.mode=fastmmi_full";
+static const char *boot_up_mode_normal   	   = " androidboot.mode=normal";
+static const char *boot_up_mode_recovery       = " androidboot.mode=recovery";
+static const char *boot_up_mode_ftm            = " androidboot.mode=ftm";
+
 static const char *auth_kernel = " androidboot.authorized_kernel=true";
-static const char *boot_up_mode_normal   = " androidboot.bootupmode=normal";
-static const char *boot_up_mode_recovery   = " androidboot.bootupmode=recovery";
-static const char *boot_up_mode_ftm   = " androidboot.bootupmode=ftm";
+
 static const char *reboot_mode_normal = " reboot=h";
 static const char *reboot_mode_recovery = " reboot=i";
 
@@ -162,6 +166,46 @@ extern int emmc_recovery_init(void);
 extern int fastboot_trigger(void);
 #endif
 
+boot_mode_type get_boot_mode_from_misc()
+{
+	int res;
+	struct boot_mode_message msg;
+	res = emmc_get_fastmmi_msg(&msg);
+	if (res < 0){
+		dprintf(CRITICAL,"emmc get fastmmi msg failure\n");
+		return BOOT_MODE_NORMAL;
+	}
+
+	if(msg.magic == BOOT_MODE_MAGIN_NUM){
+		return msg.boot_mode;
+	}else{
+		return BOOT_MODE_NORMAL;
+	}
+}
+
+boot_mode_type get_boot_mode()
+{
+	unsigned res;
+	boot_mode_type bootmode;
+	bootmode = get_boot_mode_from_misc();
+
+	if(bootmode == BOOT_MODE_FASTMMI_PCBA){
+		return BOOT_MODE_FASTMMI_PCBA;
+	}else if(bootmode == BOOT_MODE_FASTMMI_FULL){
+		return BOOT_MODE_FASTMMI_FULL;
+	}
+	
+	res = target_pause_for_battery_charge();
+	if(boot_into_recovery == 1){
+		return BOOT_MODE_RECOVERY;
+	}else if (res == PWR_ON_EVENT_FTM) {
+		return BOOT_MODE_FTM;
+	}else if (res == PWR_ON_EVENT_USB_CHG){
+		return BOOT_MODE_USB_CHG;
+	}
+	return bootmode;
+}
+
 static void ptentry_to_tag(unsigned **ptr, struct ptentry *ptn)
 {
 	struct atag_ptbl_entry atag_ptn;
@@ -180,7 +224,7 @@ unsigned char *update_cmdline(const char * cmdline)
 	int cmdline_len = 0;
 	int have_cmdline = 0;
 	unsigned char *cmdline_final = NULL;
-	int pause_at_bootup = 0;
+	boot_mode_type boot_mode;
 
 	if (cmdline && cmdline[0]) {
 		cmdline_len = strlen(cmdline);
@@ -193,22 +237,31 @@ unsigned char *update_cmdline(const char * cmdline)
 	cmdline_len += strlen(usb_sn_cmdline);
 	cmdline_len += strlen(sn_buf);
 
-	if(target_pause_for_battery_charge() == PWR_ON_EVENT_FTM)
-		cmdline_len += strlen(boot_up_mode_ftm);
-	else if(!boot_into_recovery)
+	boot_mode = get_boot_mode();
+
+	switch(boot_mode)
 	{
-		cmdline_len += strlen(boot_up_mode_normal);
-		cmdline_len += strlen(reboot_mode_normal);
-	}
-	else{
-		cmdline_len += strlen(boot_up_mode_recovery);
-		cmdline_len += strlen(reboot_mode_recovery);
-
-	}
-
-	if (target_pause_for_battery_charge() == PWR_ON_EVENT_USB_CHG) {
-		pause_at_bootup = 1;
-		cmdline_len += strlen(battchg_pause);
+		case BOOT_MODE_FASTMMI_PCBA:
+			cmdline_len += strlen(boot_up_mode_fastmmi_pcba);
+			break;
+		case BOOT_MODE_FASTMMI_FULL:
+			cmdline_len += strlen(boot_up_mode_fastmmi_full);
+			break;
+		case BOOT_MODE_FTM:
+			cmdline_len += strlen(boot_up_mode_ftm);
+			break;
+		case BOOT_MODE_USB_CHG:
+			cmdline_len += strlen(boot_up_mode_charger);
+			break;
+		case BOOT_MODE_RECOVERY:
+			cmdline_len += strlen(boot_up_mode_recovery);
+			break;
+		case BOOT_MODE_BOOTLOADER:
+			break;
+			
+		case BOOT_MODE_NORMAL:
+		default:
+			cmdline_len += strlen(boot_up_mode_normal);
 	}
 
 	if(target_use_signed_kernel() && auth_kernel_img) {
@@ -270,12 +323,6 @@ unsigned char *update_cmdline(const char * cmdline)
 		have_cmdline = 1;
 		while ((*dst++ = *src++));
 
-		if (pause_at_bootup) {
-			src = battchg_pause;
-			if (have_cmdline) --dst;
-			while ((*dst++ = *src++));
-		}
-
 		if(target_use_signed_kernel() && auth_kernel_img) {
 			src = auth_kernel;
 			if (have_cmdline) --dst;
@@ -320,33 +367,39 @@ unsigned char *update_cmdline(const char * cmdline)
 				while ((*dst++ = *src++));
 				break;
 		}
-		if(target_pause_for_battery_charge() == PWR_ON_EVENT_FTM)
+		switch(boot_mode)
 		{
+		case BOOT_MODE_FASTMMI_PCBA:
+			src = boot_up_mode_fastmmi_pcba;
+			if (have_cmdline) --dst;
+			while ((*dst++ = *src++));
+			break;
+		case BOOT_MODE_FASTMMI_FULL:
+			src = boot_up_mode_fastmmi_full;
+			if (have_cmdline) --dst;
+			while ((*dst++ = *src++));
+			break;
+		case BOOT_MODE_FTM:
 			src = boot_up_mode_ftm;
 			if (have_cmdline) --dst;
 			while ((*dst++ = *src++));
-		}
-		else if (!boot_into_recovery)
-		{
-			src = boot_up_mode_normal;
+			break;
+		case BOOT_MODE_USB_CHG:
+			src = boot_up_mode_charger;
 			if (have_cmdline) --dst;
 			while ((*dst++ = *src++));
-		}
-		else
-		{
+			break;
+		case BOOT_MODE_RECOVERY:
 			src = boot_up_mode_recovery;
 			if (have_cmdline) --dst;
 			while ((*dst++ = *src++));
-		}
-		if (!boot_into_recovery)
-		{
-			src = reboot_mode_normal;
-			if (have_cmdline) --dst;
-			while ((*dst++ = *src++));
-		}
-		else
-		{
-			src = reboot_mode_recovery;
+			break;
+		case BOOT_MODE_BOOTLOADER:
+			break;
+			
+		case BOOT_MODE_NORMAL:
+		default:
+			src = boot_up_mode_normal;
 			if (have_cmdline) --dst;
 			while ((*dst++ = *src++));
 		}

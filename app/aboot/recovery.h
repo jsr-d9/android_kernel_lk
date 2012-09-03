@@ -33,6 +33,29 @@
 #define UPDATE_MAGIC_SIZE  16
 #define UPDATE_VERSION     0x00010000
 
+#define FASTMMI_MSG_OFFSET (0)
+
+typedef enum{
+	BOOT_MODE_NORMAL = 0x0,
+	
+	BOOT_MODE_FASTMMI_PCBA = 0x10,
+	BOOT_MODE_FASTMMI_FULL,
+
+	BOOT_MODE_FTM = 0x20,
+	BOOT_MODE_USB_CHG,
+
+	BOOT_MODE_RECOVERY = 0x30,
+
+	BOOT_MODE_BOOTLOADER = 0x40
+}boot_mode_type;
+
+#define BOOT_MODE_MAGIN_NUM 0x12344321
+
+struct boot_mode_message {
+	unsigned int magic;
+	boot_mode_type boot_mode;
+};
+
 
 /* Recovery Message */
 struct recovery_message {

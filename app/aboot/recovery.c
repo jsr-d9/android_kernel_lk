@@ -507,6 +507,28 @@ static int emmc_get_recovery_msg(struct recovery_message *in)
 	return 0;
 }
 
+int emmc_get_fastmmi_msg(struct boot_mode_message *in)
+{
+	char *ptn_name = "misc";
+	unsigned long long ptn = 0;
+	unsigned int size = ROUND_TO_PAGE(sizeof(*in),511);
+	unsigned char data[size];
+	int index = INVALID_PTN;
+
+    index = partition_get_index((char *) ptn_name);
+    ptn = partition_get_offset(index);
+    if(ptn == 0) {
+		dprintf(CRITICAL,"partition %s doesn't exist\n",ptn_name);
+		return -1;
+	}
+	if (mmc_read(ptn + FASTMMI_MSG_OFFSET, (unsigned int*)data, size)) {
+		dprintf(CRITICAL,"mmc read failure %s %d\n",ptn_name, size);
+		return -1;
+	}
+	memcpy(in, data, sizeof(*in));
+	return 0;
+}
+
 int _emmc_recovery_init(void)
 {
 	int update_status = 0;
