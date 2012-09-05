@@ -73,6 +73,7 @@ char* target_arch[] = {
 	[MSM8225  - MSM7XXX_BASE]	= "MSM8225" ,
 	[MSM8625  - MSM7XXX_BASE]	= "MSM8625" ,
 	[MPQ8064  - MSM7XXX_BASE]	= "MPQ8064" ,
+	[MSM7225AB  - MSM7XXX_BASE]     = "MSM7225AB" ,
 
 };
 #define BOARD_NAME(target_id, board_id) \
