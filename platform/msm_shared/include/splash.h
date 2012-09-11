@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,8 +30,13 @@
 #ifndef __PLATFORM_SPLASH_H
 #define __PLATFORM_SPLASH_H
 
-#define SPLASH_IMAGE_WIDTH     124
-#define SPLASH_IMAGE_HEIGHT    113
+#define SPLASH_IMAGE_WIDTH_HDPI     124
+#define SPLASH_IMAGE_HEIGHT_HDPI    113
+
+#define SPLASH_IMAGE_WIDTH_MDPI     124
+#define SPLASH_IMAGE_HEIGHT_MDPI    113
+
+#define CLEAN_SCREEN_WRITE     0
 
 #if (!DISPLAY_TYPE_MIPI)
 /* This image is (SPLASH_IMAGE_WIDTH x SPLASH_IMAGE_WIDTH) raw image */

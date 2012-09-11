@@ -214,7 +214,8 @@ void display_image_on_screen(void)
     unsigned total_x;
     unsigned total_y;
     unsigned bytes_per_bpp;
-    unsigned image_base;
+    unsigned image_base_hdpi;
+    unsigned image_base_mdpi;
 
     if (!config) {
        dprintf(CRITICAL,"NULL configuration, image cannot be displayed\n");
@@ -226,17 +227,23 @@ void display_image_on_screen(void)
     total_x = config->width;
     total_y = config->height;
     bytes_per_bpp = ((config->bpp) / 8);
-    image_base = ((((total_y/2) - (SPLASH_IMAGE_WIDTH / 2) - 1) *
-		    (config->width)) + (total_x/2 - (SPLASH_IMAGE_HEIGHT / 2)));
+    image_base_hdpi = ((((total_y/2) - (SPLASH_IMAGE_WIDTH_HDPI / 2) - 1) *
+                (config->width)) + (total_x/2 - (SPLASH_IMAGE_HEIGHT_HDPI / 2)));
+    image_base_mdpi = ((((total_y/2) - (SPLASH_IMAGE_WIDTH_MDPI / 2) - 1) *
+                (config->width)) + (total_x/2 - (SPLASH_IMAGE_HEIGHT_MDPI / 2)));
 
 #if DISPLAY_TYPE_MIPI
     if (bytes_per_bpp == 3)
     {
-        for (i = 0; i < SPLASH_IMAGE_WIDTH; i++)
+        if (CLEAN_SCREEN_WRITE) {
+            memset (config->base, 0xff, config->width * config->height * bytes_per_bpp);
+        }
+
+        for (i = 0; i < SPLASH_IMAGE_WIDTH_HDPI; i++)
         {
-            memcpy (config->base + ((image_base + (i * (config->width))) * bytes_per_bpp),
-		    imageBuffer_rgb888 + (i * SPLASH_IMAGE_HEIGHT * bytes_per_bpp),
-		    SPLASH_IMAGE_HEIGHT * bytes_per_bpp);
+            memcpy (config->base + ((image_base_hdpi + (i * (config->width))) * bytes_per_bpp),
+		    imageBuffer_rgb888 + (i * SPLASH_IMAGE_HEIGHT_HDPI * bytes_per_bpp),
+		    SPLASH_IMAGE_HEIGHT_HDPI * bytes_per_bpp);
 	}
     }
     fbcon_flush();
@@ -248,11 +255,15 @@ void display_image_on_screen(void)
 #else
     if (bytes_per_bpp == 2)
     {
-        for (i = 0; i < SPLASH_IMAGE_WIDTH; i++)
+        if (CLEAN_SCREEN_WRITE) {
+            memset (config->base, 0xff, config->width * config->height * bytes_per_bpp);
+        }
+
+        for (i = 0; i < SPLASH_IMAGE_WIDTH_MDPI; i++)
         {
-            memcpy (config->base + ((image_base + (i * (config->width))) * bytes_per_bpp),
-		    imageBuffer + (i * SPLASH_IMAGE_HEIGHT * bytes_per_bpp),
-		    SPLASH_IMAGE_HEIGHT * bytes_per_bpp);
+            memcpy (config->base + ((image_base_mdpi + (i * (config->width))) * bytes_per_bpp),
+		    imageBuffer + (i * SPLASH_IMAGE_HEIGHT_MDPI * bytes_per_bpp),
+		    SPLASH_IMAGE_HEIGHT_MDPI * bytes_per_bpp);
 	}
     }
     fbcon_flush();
