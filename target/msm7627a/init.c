@@ -186,8 +186,7 @@ void target_init(void)
 
 	/* Display splash screen if enabled */
 #if DISPLAY_SPLASH_SCREEN
-	if (!machine_is_qrd7() && !machine_is_skua() && !machine_is_skub() && 
-		!machine_is_qrd5a()) {
+	if (!machine_is_qrd7() && !machine_is_skua() && !machine_is_skub()) {
 		display_init();
 		dprintf(SPEW, "Diplay initialized\n");
 	}
@@ -808,6 +807,7 @@ int target_cont_splash_screen()
 	switch(mach_type) {
 		case MSM8X25_EVB:
 		case MSM8X25_QRD5:
+		case MSM7X27A_QRD5A:
 			ret = 1;
 			break;
 		default:
