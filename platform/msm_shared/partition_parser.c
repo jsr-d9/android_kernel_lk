@@ -31,7 +31,6 @@
 #include "mmc.h"
 #include "partition_parser.h"
 
-#define PLATFORM_JB 1
 #ifndef PLATFORM_JB
 char *ext3_partitions[] =
     { "persist", "system", "cache", "userdata", "tombstones" };
@@ -788,13 +787,13 @@ mbr_fill_name(struct partition_entry *partition_ent, unsigned int type)
 	case MBR_EFS2_TYPE:
 		memcpy(partition_ent->name, "efs2", 4);
 		break;
-#ifdef PLATFORM_JB
 	case MBR_AP_CONFIG_TYPE:
 		memcpy(partition_ent->name, "apconfig", 8);
 		break;
 	case MBR_LOGO_TYPE:
 		memcpy(partition_ent->name, "logo", 4);
 		break;
+#ifdef PLATFORM_JB
 	case MBR_PERSIST_TYPE:
 		memcpy(partition_ent->name, "persist", 7);
 		break;

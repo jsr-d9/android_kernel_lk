@@ -111,7 +111,8 @@
 #define MBR_PROTECTED_TYPE        0xEE
 #define MBR_SSD_TYPE              0x5D
 
-#define MBR_USERDATA_OLD_TYPE 	0x83
+#define MBR_SYSTEM_TYPE           0x82
+#define MBR_USERDATA_OLD_TYPE 	  0x83
 
 #define GET_LLWORD_FROM_BYTE(x)    ((unsigned long long)*(x) | \
         ((unsigned long long)*(x+1) << 8) | \
