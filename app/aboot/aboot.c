@@ -1666,6 +1666,16 @@ fastboot:
 	fastboot_publish("product", TARGET(BOARD));
 	fastboot_publish("kernel", "lk");
 	fastboot_publish("serialno", sn_buf);
+
+	/* The new version of fastboot protocol needs the following information to generate 
+	 *  an empty ext4 image when using 'fastboot -w'.
+	 */
+#if _EMMC_BOOT
+	fastboot_publish("partition-type:userdata", "ext4");
+	fastboot_publish("partition-size:userdata", BOARD_USERDATAIMAGE_PARTITION_SIZE);
+	fastboot_publish("partition-type:cache", "ext4");
+	fastboot_publish("partition-size:cache", BOARD_CACHEIMAGE_PARTITION_SIZE);
+#endif
 	partition_dump();
 	sz = target_get_max_flash_size();
 	fastboot_init(target_get_scratch_address(), sz);
