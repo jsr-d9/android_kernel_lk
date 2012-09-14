@@ -1551,6 +1551,13 @@ void aboot_init(const struct app_descriptor *app)
 	unsigned usb_init = 0;
 	unsigned sz = 0;
 
+	/* The following varibale should be defined statically because LK may refer to them out of the function */
+	static char userdata_sz_hex[sizeof(long long)*2+3];//The length of an long long integer in hex mode
+	static char cache_sz_hex[sizeof(long long)*2+3];//The length of an long long integer in hex mode
+
+	int index;
+	unsigned long long ptn_size = 0;
+
 	/* Setup page size information for nand/emmc reads */
 	if (target_is_emmc_boot())
 	{
@@ -1671,11 +1678,23 @@ fastboot:
 	 *  an empty ext4 image when using 'fastboot -w'.
 	 */
 #if _EMMC_BOOT
+	index = partition_get_index("userdata");
+	ptn_size = partition_get_size(index);
+	snprintf(userdata_sz_hex, sizeof(userdata_sz_hex), "0x%llx", ptn_size);
+	dprintf(SPEW, "partition-size:userdata: %s\n", userdata_sz_hex);
+
 	fastboot_publish("partition-type:userdata", "ext4");
-	fastboot_publish("partition-size:userdata", BOARD_USERDATAIMAGE_PARTITION_SIZE);
+	fastboot_publish("partition-size:userdata", userdata_sz_hex);
+
+	index = partition_get_index("cache");
+	ptn_size = partition_get_size(index);
+	snprintf(cache_sz_hex, sizeof(cache_sz_hex), "0x%llx", ptn_size);
+	dprintf(SPEW, "partition-size:cache: %s\n", cache_sz_hex);
+
 	fastboot_publish("partition-type:cache", "ext4");
-	fastboot_publish("partition-size:cache", BOARD_CACHEIMAGE_PARTITION_SIZE);
+	fastboot_publish("partition-size:cache", cache_sz_hex);
 #endif
+
 	partition_dump();
 	sz = target_get_max_flash_size();
 	fastboot_init(target_get_scratch_address(), sz);

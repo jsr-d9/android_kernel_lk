@@ -52,8 +52,6 @@ CFLAGS := -O2 -g -fno-builtin -finline -W -Wall -Wno-multichar -Wno-unused-param
 #CFLAGS += -Werror
 ifeq ($(EMMC_BOOT),1)
   CFLAGS += -D_EMMC_BOOT=1
-  CFLAGS += -DBOARD_USERDATAIMAGE_PARTITION_SIZE=\"$(shell echo 'ibase=10;obase=16;$(BOARD_USERDATAIMAGE_PARTITION_SIZE)'| bc)\"
-  CFLAGS += -DBOARD_CACHEIMAGE_PARTITION_SIZE=\"$(shell echo 'ibase=10;obase=16;$(BOARD_CACHEIMAGE_PARTITION_SIZE)'| bc)\"
 endif
 
 ifeq ($(SIGNED_KERNEL),1)
