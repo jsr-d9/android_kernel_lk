@@ -145,19 +145,6 @@ struct atag_ptbl_entry
 	unsigned flags;
 };
 
-//ML add support change fastboot usb info
-#define USB_SERIAL_NUMBER_LEN 13
-#define USB_ID_MAGIC_NUM    0x75736264 //in ascii "usbd"
-typedef struct
-{
-  unsigned int magicNum;
-  unsigned short idVendor;
-  unsigned short idProduct;
-  unsigned serialNumberLen ;
-  char   serialNumber[USB_SERIAL_NUMBER_LEN];
-} usb_device_info;
-
-
 char sn_buf[13];
 
 extern int emmc_recovery_init(void);
@@ -1520,7 +1507,6 @@ void splash_screen ()
 static void set_usb_serial_num()
 {
 	boot_info_for_apps binfo ;
-	usb_device_info *usb_info;
 	unsigned smem_status;
 	smem_status = smem_read_alloc_entry(SMEM_BOOT_INFO_FOR_APPS,
 										&binfo,  sizeof(boot_info_for_apps));
@@ -1529,18 +1515,15 @@ static void set_usb_serial_num()
 		dprintf(CRITICAL, "ERROR: unable to read shared memory for boot info\n");
 		return;
 	}
-      usb_info  = (usb_device_info*)(binfo.PAD);
-
 	  //check if is valid
-	  if(usb_info->magicNum ==USB_ID_MAGIC_NUM ){
-
-		if(usb_info->serialNumberLen>13){
+	  if(binfo.usb_info.magicNum ==USB_ID_MAGIC_NUM ){
+			if(binfo.usb_info.serialNumberLen>8 || binfo.usb_info.serialNumberLen==0){
 			dprintf(CRITICAL, "ERROR: wrong serial num length \n");
 			return;
 		}
 
 		memset(sn_buf,0,sizeof(sn_buf));
-		memcpy(sn_buf,&usb_info->serialNumber,usb_info->serialNumberLen);
+		memcpy(sn_buf,&(binfo.usb_info.serialNumber),binfo.usb_info.serialNumberLen);
 	}
 }
 #endif

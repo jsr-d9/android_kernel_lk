@@ -165,6 +165,20 @@ typedef struct {
 
 #elif PLATFORM_MSM7X27A
 
+//ML add support change fastboot usb info
+#define USB_SERIAL_NUMBER_LEN 8 //13
+#define USB_ID_MAGIC_NUM    0x75736264 //in ascii "usbd"
+typedef struct
+{
+	  unsigned int magicNum;
+	  unsigned short idVendor;
+	  unsigned short idProduct;
+	  unsigned int serialNumberLen ;
+	  char   serialNumber[USB_SERIAL_NUMBER_LEN];
+	  unsigned short enableVerify;
+	  char reserved[2];
+} usb_device_info;
+
 typedef struct {
 	uint32_t apps_img_start_addr;
 	uint32_t boot_flags;
@@ -172,7 +186,8 @@ typedef struct {
 	boot_symmetric_key_info key_info;
 	uint16_t boot_key_press[10];
 	uint32_t timetick;
-	uint8_t PAD[28];
+	usb_device_info usb_info;
+	uint8_t PAD[4];
 } boot_info_for_apps;
 
 #else
