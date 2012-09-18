@@ -48,9 +48,13 @@ static unsigned int halibut_col_gpios_qrd[] = { 36, 37 };
 static unsigned int halibut_row_gpios_evb[] = { 31 };
 static unsigned int halibut_col_gpios_evb[] = { 36, 37 };
 
+static unsigned int halibut_row_gpios_skud[] = { 31, 32 };
+static unsigned int halibut_col_gpios_skud[] = { 37 };
+
 #define KEYMAP_INDEX(row, col) ((row)*ARRAY_SIZE(halibut_col_gpios) + (col))
 #define KEYMAP_INDEX_QRD(row, col) ((row)*ARRAY_SIZE(halibut_col_gpios_qrd) + (col))
 #define KEYMAP_INDEX_EVB(row, col) ((row)*ARRAY_SIZE(halibut_col_gpios_evb) + (col))
+#define KEYMAP_INDEX_SKUD(row, col) ((row)*ARRAY_SIZE(halibut_col_gpios_skud) + (col))
 
 static const unsigned short halibut_keymap[ARRAY_SIZE(halibut_col_gpios) *
 					   ARRAY_SIZE(halibut_row_gpios)] = {
@@ -109,6 +113,14 @@ static const unsigned short halibut_keymap_qrd5[ARRAY_SIZE(halibut_col_gpios_evb
 	[KEYMAP_INDEX_EVB(0, 1)] = KEY_VOLUMEUP,
 };
 
+static const unsigned short halibut_keymap_skud[ARRAY_SIZE(halibut_col_gpios_skud)
+					       *
+					       ARRAY_SIZE
+					       (halibut_row_gpios_skud)] = {
+	[KEYMAP_INDEX_SKUD(0, 0)] = KEY_VOLUMEUP,
+	[KEYMAP_INDEX_SKUD(1, 0)] = KEY_VOLUMEDOWN,
+};
+
 static struct gpio_keypad_info halibut_keypad_info_surf = {
 	.keymap = halibut_keymap,
 	.output_gpios = halibut_row_gpios,
@@ -131,6 +143,17 @@ static struct gpio_keypad_info halibut_keypad_info_qrd = {
 	.flags = GPIOKPF_DRIVE_INACTIVE,
 };
 
+static struct gpio_keypad_info halibut_keypad_info_skud = {
+	.keymap = halibut_keymap_skud,
+	.output_gpios = halibut_row_gpios_skud,
+	.input_gpios = halibut_col_gpios_skud,
+	.noutputs = ARRAY_SIZE(halibut_row_gpios_skud),
+	.ninputs = ARRAY_SIZE(halibut_col_gpios_skud),
+	.settle_time = 5 /* msec */ ,
+	.poll_time = 20 /* msec */ ,
+	.flags = GPIOKPF_ACTIVE_HIGH,
+};
+
 static struct gpio_keypad_info halibut_keypad_info_evb = {
 	.keymap = halibut_keymap_evb,
 	.output_gpios = halibut_row_gpios_evb,
@@ -151,6 +174,8 @@ void keypad_init(void)
 		gpio_keypad_init(&halibut_keypad_info_qrd);
 	else if (machine_is_evb() || machine_is_qrd5() || machine_is_skua() || machine_is_qrd5a())
 		gpio_keypad_init(&halibut_keypad_info_evb);
+	else if (machine_is_skud())
+		gpio_keypad_init(&halibut_keypad_info_skud);
 	else
 		gpio_keypad_init(&halibut_keypad_info_surf);
 }
