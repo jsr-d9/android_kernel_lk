@@ -76,7 +76,8 @@ void kmain(void)
 	// do any super early target initialization
 	target_early_init();
 
-	dprintf(INFO, "welcome to lk\n\n");
+	dprintf(INFO, "welcome to lk\n");
+	dprintf(INFO, "build date:%s %s\n\n", __DATE__, __TIME__);
 	
 	// deal with any static constructors
 	dprintf(SPEW, "calling constructors\n");
