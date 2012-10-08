@@ -550,6 +550,7 @@ int boot_linux_from_mmc(void)
 	unsigned imagesize_actual;
 	unsigned second_actual = 0;
 	unsigned dt_actual = 0;
+	boot_mode_type boot_mode;
 
 #if DEVICE_TREE
 	struct dt_table *table;
@@ -621,12 +622,13 @@ int boot_linux_from_mmc(void)
 		}
 
 		offset = imagesize_actual;
+		boot_mode = get_boot_mode();
 		/* Read signature */
 		if(mmc_read(ptn + offset, (void *)(image_addr + offset), page_size))
 		{
 			dprintf(CRITICAL, "ERROR: Cannot read boot image signature\n");
 		}
-		else
+		else if(boot_mode == BOOT_MODE_NORMAL || boot_mode == BOOT_MODE_USB_CHG)
 		{
 			auth_kernel_img = image_verify((unsigned char *)image_addr,
 					(unsigned char *)(image_addr + imagesize_actual),
