@@ -36,6 +36,10 @@ _start:
 	b	arm_irq
 	b	arm_fiq
 
+printbuf_magic:
+	.word 0x474F4C52
+printbuf_tag:
+	.word print_buf
 reset:
 
 #ifdef ENABLE_TRUSTZONE

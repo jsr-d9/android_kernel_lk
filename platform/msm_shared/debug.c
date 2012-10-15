@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2009, Google Inc.
  * All rights reserved.
- * Copyright (c) 2009, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012, Code Aurora Forum. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,9 +39,10 @@
 #define WITH_DEBUG_GLOBAL_RAM 1
 
 #if WITH_DEBUG_GLOBAL_RAM
+#define RESERVE_LOG_MAGIC 0x474F4C52  //"RLOG" in ascii
 #define PRINT_BUFF_SIZE	(128 * 1024)
 char print_buf[PRINT_BUFF_SIZE];
-unsigned int print_idx = 0;
+unsigned int print_idx = 12;
 #endif
 
 void _dputc(char c)
@@ -68,6 +69,10 @@ void _dputc(char c)
 	if (print_idx >= PRINT_BUFF_SIZE) {
 		print_idx = 0;
 	}
+	//update the index to header
+	*(int *)print_buf = RESERVE_LOG_MAGIC;
+	*(int *)(print_buf+4) = PRINT_BUFF_SIZE;
+	*(int *)(print_buf+8) = print_idx;
 #endif
 }
 
