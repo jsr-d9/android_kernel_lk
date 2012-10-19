@@ -851,8 +851,26 @@ int target_cont_splash_screen()
 
 	switch(mach_type) {
 		case MSM8X25_EVB:
-		case MSM8X25_QRD5:
-		case MSM7X27A_QRD5A:
+                case MSM8X25_QRD5:
+                case MSM7X27A_QRD5A:
+                case MSM8X25Q_SKUD:
+			ret = 1;
+			break;
+		default:
+			ret = 0;
+	};
+	return ret;
+}
+
+int target_is_sku3()
+{
+	int ret = 0;
+	unsigned mach_type = 0;
+
+	mach_type = board_machtype();
+
+	switch(mach_type) {
+		case MSM7X27A_QRD3:
 			ret = 1;
 			break;
 		default:
