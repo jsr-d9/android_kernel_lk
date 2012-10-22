@@ -131,6 +131,6 @@ void display_init(void)
 void display_shutdown(void)
 {
 	dprintf(SPEW, "display_shutdown()\n");
-	if (display_enabled  && !target_cont_splash_screen())
+	if (display_enabled)
 		msm_display_off();
 }
