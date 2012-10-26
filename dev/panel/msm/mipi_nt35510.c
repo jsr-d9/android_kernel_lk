@@ -41,7 +41,8 @@
 int mipi_nt35510_panel_dsi_config(int on)
 {
         if (on) {
-                /* TODO: move these configs to MP to boost power on speed */
+                /* Moved these configs to MP to boost power on speed */
+#if 0
                 gpio_tlmm_config(GPIO_CFG(35, 0, 1, 0, 0), 0);
                 gpio_tlmm_config(GPIO_CFG(40, 0, 1, 0, 0), 0);
 
@@ -73,14 +74,13 @@ int mipi_nt35510_panel_dsi_config(int on)
                         gpio_set(96, 0x1);
                         udelay(50);
                 }
-
                 gpio_config(35, GPIO_OUTPUT);
-                gpio_set(35, 0x1);
-
                 gpio_config(40, GPIO_OUTPUT);
+                gpio_config(85, GPIO_OUTPUT);
+#endif
+                gpio_set(35, 0x1);
                 gpio_set(40, 0x1);
 
-                gpio_config(85, GPIO_OUTPUT);
                 gpio_set(85, 0x1);
                 mdelay(20);
                 gpio_set(85, 0x0);

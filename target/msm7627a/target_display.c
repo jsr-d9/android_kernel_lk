@@ -46,10 +46,13 @@ static int msm7627a_mdp_clock_init(int enable)
 
 	rate = panel.panel_info.clk_rate;
 
-	if (enable)
-		mdp_clock_init(rate);
-	else
+	if (enable) {
+                /* enable MDP clock in MP to boost display up */
+                if (board_machtype() != MSM8X25_QRD5)
+                        mdp_clock_init(rate);
+	} else {
 		mdp_clock_disable();
+        }
 	return ret;
 }
 
