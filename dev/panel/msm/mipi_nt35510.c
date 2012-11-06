@@ -41,32 +41,11 @@
 int mipi_nt35510_panel_dsi_config(int on)
 {
         if (on) {
-                /* Moved these configs to MP to boost power on speed */
-#if 0
-                gpio_tlmm_config(GPIO_CFG(35, 0, 1, 0, 0), 0);
-                gpio_tlmm_config(GPIO_CFG(40, 0, 1, 0, 0), 0);
-
-                if(board_hw_version() ==  HW_VERSION(3, 0))
-                        gpio_tlmm_config(GPIO_CFG(96, 0, 0, 0, 0), 0);
-                else
-                        gpio_tlmm_config(GPIO_CFG(96, 0, 1, 0, 0), 0);
-
-                gpio_tlmm_config(GPIO_CFG(85, 0, 1, 0, 0), 0);
-
-                if(board_hw_version() ==  HW_VERSION(3, 0))
+                if (board_hw_version() ==  HW_VERSION(3, 0)) {
                         gpio_config(96, GPIO_INPUT);
-                else
+                } else {
                         gpio_config(96, GPIO_OUTPUT);
-                /*
-                 * As per the specification follow the sequence to put lcd
-                 * backlight in one wire mode.
-                 */
-                if(board_hw_version() ==  HW_VERSION(3, 0))
-                {
-                        pcom_init_backlight();
-                        pcom_set_backlight(255);
-                }
-                else{
+
                         gpio_set(96, 0x1);
                         udelay(190);
                         gpio_set(96, 0x0);
@@ -74,10 +53,7 @@ int mipi_nt35510_panel_dsi_config(int on)
                         gpio_set(96, 0x1);
                         udelay(50);
                 }
-                gpio_config(35, GPIO_OUTPUT);
-                gpio_config(40, GPIO_OUTPUT);
-                gpio_config(85, GPIO_OUTPUT);
-#endif
+
                 gpio_set(35, 0x1);
                 gpio_set(40, 0x1);
 
