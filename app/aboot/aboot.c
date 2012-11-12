@@ -2,7 +2,7 @@
  * Copyright (c) 2009, Google Inc.
  * All rights reserved.
  *
- * Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012 The Linux Foundation. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -1475,6 +1475,41 @@ void cmd_oem_devinfo(const char *arg, void *data, unsigned sz)
 	fastboot_okay("");
 }
 
+void cmd_oem_log(const char *arg, void *data, unsigned sz)
+{
+#ifdef WITH_DEBUG_GLOBAL_RAM
+	extern char print_buf[PRINT_BUFF_SIZE];
+	// The max response size if 64 bytes. Should minus 4 byte "INFO" and '\0'
+	char response[64 - 4 - 1];
+	char* buf = print_buf;
+	int size = (int)(buf + 4);
+	int index = (int)(buf + 8);
+	int i = 0;
+
+	snprintf(response, sizeof(response), "\tbuf: %p\t size: %d\tindex: %d", print_buf, size, index);
+	fastboot_info(response);
+	buf = print_buf + 12;
+
+	while ((buf < (char*)print_buf + PRINT_BUFF_SIZE) && (*buf != 0)){
+		memset(response, 0, sizeof(response));
+		// Just output and exit if we have reached the end of the buffer.
+		while((i < sizeof(response)) && (*buf != '\0') && (buf < (char*)print_buf + PRINT_BUFF_SIZE)) {
+			if (*buf == '\n') {
+				//just jump it. For fastboot_info will output a new line
+				buf++;
+				break;
+			}
+			response[i++] = *buf++;
+		}
+		i = 0;
+		fastboot_info(response);
+	}
+	fastboot_okay("");
+
+#endif
+
+}
+
 void splash_screen ()
 {
 	struct ptentry *ptn;
@@ -1655,6 +1690,7 @@ fastboot:
 	fastboot_register("reboot-bootloader", cmd_reboot_bootloader);
 	fastboot_register("oem unlock", cmd_oem_unlock);
 	fastboot_register("oem device-info", cmd_oem_devinfo);
+	fastboot_register("oem log", cmd_oem_log);
 	fastboot_publish("product", TARGET(BOARD));
 	fastboot_publish("kernel", "lk");
 	fastboot_publish("serialno", sn_buf);

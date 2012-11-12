@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2008 Travis Geiselbrecht
+ * Copyright (c) 2012 The Linux Foundation. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -47,6 +48,7 @@ extern "C" {
 #define INFO 1
 #define SPEW 2
 
+#define PRINT_BUFF_SIZE (128 * 1024)
 /* output */
 void _dputc(char c); // XXX for now, platform implements
 int _dputs(const char *str);
