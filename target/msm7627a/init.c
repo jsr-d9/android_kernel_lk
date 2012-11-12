@@ -110,6 +110,8 @@ int machine_is_evb();
 int machine_is_qrd5();
 int machine_is_skua();
 int machine_is_skud();
+int machine_is_skue();
+
 /* for these partitions, start will be offset by either what we get from
  * smem, or from the above offset if smem is not useful. Also, we should
  * probably have smem_ptable code populate our flash_ptable.
@@ -322,6 +324,10 @@ void board_info(void)
 			case 0xA7:
 				hw_platform = MSM8X25Q_SKUD;
 				BOARD_NAME(target_msm_id, "SKUD");
+				break;
+			case 0xA8:
+				hw_platform = MSM8X25Q_SKUE;
+				BOARD_NAME(target_msm_id, "SKUE");
 				break;
 			case 0xF:
 				hw_platform = MSM8X25_QRD7;
@@ -693,6 +699,21 @@ int machine_is_skud()
 	return ret;
 }
 
+int machine_is_skue()
+{
+	int ret = 0;
+	unsigned mach_type = board_machtype();
+
+	switch(mach_type) {
+		case MSM8X25Q_SKUE:
+			ret = 1;
+			break;
+		default:
+			ret = 0;
+	}
+	return ret;
+}
+
 int machine_is_skua()
 {
 	int ret = 0;
@@ -757,6 +778,7 @@ int machine_is_8x25()
 		case MSM8X25_QRD7:
 		case MSM8X25_SKUB:
 		case MSM8X25Q_SKUD:
+		case MSM8X25Q_SKUE:
 			ret = 1;
 			break;
 		default:
