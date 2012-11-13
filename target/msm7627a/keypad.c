@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2009, Google Inc.
  * All rights reserved.
- * Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2009-2012, The Linux Foundation. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,10 +51,14 @@ static unsigned int halibut_col_gpios_evb[] = { 36, 37 };
 static unsigned int halibut_row_gpios_skud[] = { 31, 32 };
 static unsigned int halibut_col_gpios_skud[] = { 37 };
 
+static unsigned int halibut_row_gpios_skue[] = { 31, 32 };
+static unsigned int halibut_col_gpios_skue[] = { 37 };
+
 #define KEYMAP_INDEX(row, col) ((row)*ARRAY_SIZE(halibut_col_gpios) + (col))
 #define KEYMAP_INDEX_QRD(row, col) ((row)*ARRAY_SIZE(halibut_col_gpios_qrd) + (col))
 #define KEYMAP_INDEX_EVB(row, col) ((row)*ARRAY_SIZE(halibut_col_gpios_evb) + (col))
 #define KEYMAP_INDEX_SKUD(row, col) ((row)*ARRAY_SIZE(halibut_col_gpios_skud) + (col))
+#define KEYMAP_INDEX_SKUE(row, col) ((row)*ARRAY_SIZE(halibut_col_gpios_skue) + (col))
 
 static const unsigned short halibut_keymap[ARRAY_SIZE(halibut_col_gpios) *
 					   ARRAY_SIZE(halibut_row_gpios)] = {
@@ -121,6 +125,14 @@ static const unsigned short halibut_keymap_skud[ARRAY_SIZE(halibut_col_gpios_sku
 	[KEYMAP_INDEX_SKUD(1, 0)] = KEY_VOLUMEDOWN,
 };
 
+static const unsigned short halibut_keymap_skue[ARRAY_SIZE(halibut_col_gpios_skue)
+					       *
+					       ARRAY_SIZE
+					       (halibut_row_gpios_skue)] = {
+	[KEYMAP_INDEX_SKUE(0, 0)] = KEY_VOLUMEUP,
+	[KEYMAP_INDEX_SKUE(1, 0)] = KEY_VOLUMEDOWN,
+};
+
 static struct gpio_keypad_info halibut_keypad_info_surf = {
 	.keymap = halibut_keymap,
 	.output_gpios = halibut_row_gpios,
@@ -154,6 +166,17 @@ static struct gpio_keypad_info halibut_keypad_info_skud = {
 	.flags = GPIOKPF_ACTIVE_HIGH,
 };
 
+static struct gpio_keypad_info halibut_keypad_info_skue = {
+	.keymap = halibut_keymap_skue,
+	.output_gpios = halibut_row_gpios_skue,
+	.input_gpios = halibut_col_gpios_skue,
+	.noutputs = ARRAY_SIZE(halibut_row_gpios_skue),
+	.ninputs = ARRAY_SIZE(halibut_col_gpios_skue),
+	.settle_time = 5 /* msec */ ,
+	.poll_time = 20 /* msec */ ,
+	.flags = GPIOKPF_ACTIVE_HIGH,
+};
+
 static struct gpio_keypad_info halibut_keypad_info_evb = {
 	.keymap = halibut_keymap_evb,
 	.output_gpios = halibut_row_gpios_evb,
@@ -176,6 +199,8 @@ void keypad_init(void)
 		gpio_keypad_init(&halibut_keypad_info_evb);
 	else if (machine_is_skud())
 		gpio_keypad_init(&halibut_keypad_info_skud);
+	else if (machine_is_skue())
+		gpio_keypad_init(&halibut_keypad_info_skue);
 	else
 		gpio_keypad_init(&halibut_keypad_info_surf);
 }

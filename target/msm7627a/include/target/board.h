@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2012 The Linux Foundation. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -46,6 +46,7 @@
 #define MSM7X27A_QRD5A	4052
 #define MSM8X25_SKUB	4053
 #define MSM8X25Q_SKUD	4055
+#define MSM8X25Q_SKUE	4056
 #define MSM8X25_QRD7	4095
 
 #define LINUX_MACHTYPE	MSM7X27A_SURF
