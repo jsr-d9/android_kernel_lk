@@ -189,7 +189,7 @@ warm_boot_tag:
 	 * dynamically allocated stack, so we don't need it for very long
 	 */
 abort_stack:
-	.skip 1024
+	.skip 4096 /* 1K is tooo small! Why not enlarge it since 1M is enough for LK*/
 abort_stack_top:
 
 .rodata:
