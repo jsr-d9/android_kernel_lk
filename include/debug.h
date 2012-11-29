@@ -48,7 +48,7 @@ extern "C" {
 #define INFO 1
 #define SPEW 2
 
-#define PRINT_BUFF_SIZE (128 * 1024)
+#define PRINT_BUFF_SIZE (64 * 1024)
 /* output */
 void _dputc(char c); // XXX for now, platform implements
 int _dputs(const char *str);

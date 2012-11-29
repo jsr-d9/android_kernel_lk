@@ -98,7 +98,6 @@ struct dt_table{
 	uint32_t version;
 	unsigned num_entries;
 };
-
 struct dt_entry * get_device_tree_ptr(struct dt_table *);
 int update_device_tree(const void *, char *, void *, unsigned);
 #endif
@@ -127,6 +126,9 @@ static const char *baseband_sglte   = " androidboot.baseband=sglte";
 /* Assuming unauthorized kernel image by default */
 static int auth_kernel_img = 0;
 
+/* TODO: The size is hard coded */
+static unsigned char cpr_buf[4096];
+
 static device_info device = {DEVICE_MAGIC, 0, 0};
 
 static struct udc_device surf_udc_device = {
@@ -144,6 +146,103 @@ struct atag_ptbl_entry
 	unsigned size;
 	unsigned flags;
 };
+
+enum cpr_status {
+	CPR_DISABLED = 0,
+	CPR_ENABLED,
+	CPR_STATUS,
+	CPR_UNKNOWN
+};
+
+enum cpr_cmd {
+	ENABLE_CPR = 0,
+	DISABLE_CPR,
+	GET_CPR_STATUS
+};
+
+/* The misc partition layout */
+enum misc_region_type {
+	TYPE_BOOT_REASON = 0,
+	TYPE_SWITCH_CTL,
+	TYPE_LOG,
+	TYPE_CPR,
+	TYPE_RESERVE,
+};
+
+enum misc_region_mode {
+	MODE_RDONLY = 0,
+	MODE_WRONLY,
+	MODE_RW,
+	MODE_UNKNOWN
+};
+
+
+/* Struct to describe partition regions */
+struct ptn_rgn {
+	int type; // Usage purpose
+	int mode; // Operation mode
+	unsigned long long offset; // Offset of the region
+	unsigned long long size; // Size of the region
+	int reserve[2]; // 8 bytes reserve space
+};
+
+#define CPR_FLAG0 0x900df1a9 // good flag
+#define CPR_FLAG1 0x45525043 // CPRE
+
+
+#define SZ_MISC_TOTAL 0x100000 // 1M
+#define SZ_MISC_BOOT_REASON 0x4000 // 16K
+#define SZ_MISC_SWITCH_CTL 0x4000
+#define SZ_MISC_LOG 0x4000
+#define SZ_MISC_CPR 0x1000 // 4K
+#define SZ_MISC_RESERVE 0x0F3000 // 972K
+
+#if (SZ_MISC_BOOT_REGION + SZ_MISC_SWITCH_CTL + SZ_MISC_LOG + SZ_MISC_CPR) > SZ_MISC_TOTAL
+#error misc partition exceeded its max size
+#endif
+
+static struct ptn_rgn misc_regions[] = {
+	{
+		.type = TYPE_BOOT_REASON,
+		.mode = MODE_RW,
+		.offset = 0,
+		.size = SZ_MISC_BOOT_REASON // 16K
+	},
+	{
+		.type = TYPE_SWITCH_CTL,
+		.mode = MODE_RW,
+		.offset = SZ_MISC_BOOT_REASON, // 16K
+		.size = SZ_MISC_SWITCH_CTL // 16K
+	},
+	{
+		.type = TYPE_LOG,
+		.mode = MODE_RW,
+		.offset = SZ_MISC_BOOT_REASON + SZ_MISC_SWITCH_CTL, // 32K
+		.size = SZ_MISC_LOG // 16K
+	},
+	{
+		.type = TYPE_CPR,
+		.mode = MODE_RW,
+		.offset = SZ_MISC_BOOT_REASON + SZ_MISC_SWITCH_CTL + SZ_MISC_LOG, //48K
+		.size = SZ_MISC_CPR
+	},
+	{
+		.type = TYPE_RESERVE,
+		.mode = MODE_RW,
+		.offset = SZ_MISC_BOOT_REASON + SZ_MISC_SWITCH_CTL +
+			SZ_MISC_LOG + SZ_MISC_CPR,
+		.size = SZ_MISC_RESERVE
+	}
+};
+
+struct cpr_status_info
+{
+	unsigned int flag[2];
+	unsigned int status;
+	int reserve;
+};
+
+
 
 char sn_buf[13];
 
@@ -533,7 +632,6 @@ unsigned page_mask = 0;
 
 static unsigned char buf[4096]; //Equal to max-supported pagesize
 static unsigned char dt_buf[4096];
-
 int boot_linux_from_mmc(void)
 {
 	struct boot_img_hdr *hdr = (void*) buf;
@@ -551,6 +649,7 @@ int boot_linux_from_mmc(void)
 	unsigned second_actual = 0;
 	unsigned dt_actual = 0;
 	boot_mode_type boot_mode;
+	struct cpr_status_info info;
 
 #if DEVICE_TREE
 	struct dt_table *table;
@@ -757,6 +856,19 @@ unified_boot:
 	} else {
 		cmdline = DEFAULT_CMDLINE;
 	}
+
+	if (get_cpr_config(&info)) {
+		dprintf(CRITICAL, "ERROR: Get CPR status failed, continue anyway\n");
+	}
+
+	dprintf(CRITICAL, "CPR status=%d\n", info.status);
+
+	if ((info.flag[0] == CPR_FLAG0) && (info.flag[1] == CPR_FLAG1) &&
+			((info.status == CPR_DISABLED) || (info.status == CPR_ENABLED))) {
+		strncat(cmdline, info.status == CPR_ENABLED ? " msm_cpr.enable=1" : " msm_cpr.enable=0",
+				BOOT_ARGS_SIZE);
+	}
+
 	dprintf(INFO, "cmdline = '%s'\n", cmdline);
 
 	dprintf(INFO, "\nBooting Linux\n");
@@ -1475,6 +1587,154 @@ void cmd_oem_devinfo(const char *arg, void *data, unsigned sz)
 	fastboot_okay("");
 }
 
+/* XXX: Note offset & sz should be page aligned
+ * opt: 0 stand for write, otherwise read
+ */
+int handle_misc_data(enum misc_region_type type, int opt, void* data, uint64_t offset, uint64_t sz)
+{
+	int ptn;
+	uint64_t ptn_offset; // The global offset compare to the beginning of the mmc
+	uint64_t ptn_size;
+	uint64_t rgn_offset; // offset of the region compare to the beginning of misc partition
+
+	if ((page_size == 0) || (offset & (page_size -1)) || (sz & (page_size-1))) {
+		dprintf(CRITICAL, "offset & sz should be page aligned\n");
+		return -1;
+	}
+
+	ptn = partition_get_index("misc");
+	ptn_offset = partition_get_offset(ptn);
+	ptn_size = partition_get_size(ptn);
+
+	/* Get the offset of the region */
+	rgn_offset = misc_regions[type].offset;
+
+	/* The config data */
+	if (ptn_size < rgn_offset + offset + sz) {
+		dprintf(CRITICAL, "offset & sz exceeded the misc region");
+		return -1;
+	}
+
+	/* get data from mmc */
+	if (opt != 0) {
+		if (mmc_read(ptn_offset + rgn_offset + offset, data, sz)) {
+			dprintf(CRITICAL, "Read from mmc failed\n");
+			return -1;
+		}
+	} else {
+		if (mmc_write(ptn_offset + rgn_offset + offset, sz, data)) {
+			dprintf(CRITICAL, "Write to mmc failed\n");
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+/* Get the cpr configration */
+int set_cpr_config(struct cpr_status_info *info)
+{
+	if (page_size == 0) {
+		dprintf(CRITICAL, "page_size not initialized yet\n");
+		return -1;
+	}
+
+	memcpy(cpr_buf, info, sizeof(struct cpr_status_info));
+
+	/* Write CPR config to mmc */
+	if (handle_misc_data(TYPE_CPR, 0/*Write*/, cpr_buf, 0, page_size)) {
+		dprintf(CRITICAL, "get misc data failed\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+/* Get the cpr configration */
+int get_cpr_config(struct cpr_status_info *info)
+{
+	if (page_size == 0) {
+		dprintf(CRITICAL, "page_size not initialized yet\n");
+		return -1;
+	}
+	if (handle_misc_data(TYPE_CPR, 1/*Read*/, cpr_buf, 0, page_size)) {
+		dprintf(CRITICAL, "get misc data failed\n");
+		return -1;
+	}
+
+	memcpy(info, cpr_buf, sizeof(struct cpr_status_info));
+	return 0;
+}
+
+/* fastboot oem cpr disable: Disable CPR in kernel
+ * fastboot oem cpr enable:  Enable CPR in kernel
+ * fastboot oem cpr status:  Display current CPR setting
+ */
+void cmd_oem_cpr(const char *arg, void *data, unsigned sz)
+{
+	char response[64];
+	int cmd = GET_CPR_STATUS; // disable:0 enable:1 status:2
+	struct cpr_status_info info;
+
+	snprintf(response, sizeof(response), "processing cpr command:%s", arg);
+	fastboot_info(response);
+
+	if (strstr(arg, "enable")) {
+		cmd = ENABLE_CPR;
+		dprintf(INFO, "enable CPR\n");
+	} else if (strstr(arg, "disable")) {
+		cmd = DISABLE_CPR;
+		dprintf(INFO, "disable CPR\n");
+	} else if (strstr(arg, "status")) {
+		cmd = GET_CPR_STATUS;
+		dprintf(INFO, "show CPR status\n");
+	} else {
+		fastboot_info("Please use the follow command");
+		fastboot_info("fastboot oem cpr disable: Disable CPR in kernel");
+		fastboot_info("fastboot oem cpr enable:  Enable CPR in kernel");
+		fastboot_info("fastboot oem cpr status:  Display current CPR setting");
+		goto out;
+	}
+
+	if (target_is_emmc_boot()) {
+		if (cmd != GET_CPR_STATUS) {
+			info.status = (cmd == ENABLE_CPR ? CPR_ENABLED : CPR_DISABLED);
+			info.flag[0] = CPR_FLAG0;
+			info.flag[1] = CPR_FLAG1; /*CPRE*/
+
+			if (set_cpr_config(&info)) {
+				fastboot_info("Set CPR config failed");
+				goto out;
+			}
+			snprintf(response, sizeof(response), "CPR cmd(%d) write success!\n", cmd);
+			fastboot_info(response);
+			goto out;
+		} else {
+			if (get_cpr_config(&info)) {
+				fastboot_info("get cpr config failed");
+				goto out;
+			}
+
+			if ((info.flag[0] == CPR_FLAG0) && (info.flag[1] == CPR_FLAG1)
+					&& ((info.status == CPR_DISABLED) || (info.status == CPR_ENABLED))) {
+				snprintf(response, sizeof(response), "CPR status: %s\n",
+						info.status == CPR_DISABLED ? "disabled" : "enabled");
+				fastboot_info(response);
+			} else {
+				fastboot_info("bad CPR flag");
+			}
+
+		}
+
+	} else {
+		snprintf(response, sizeof(response), "ERROR: Partition type not supported\n");
+		fastboot_info(response);
+		goto out;
+	}
+out:
+	fastboot_okay("");
+}
+
 void cmd_oem_log(const char *arg, void *data, unsigned sz)
 {
 #ifdef WITH_DEBUG_GLOBAL_RAM
@@ -1691,11 +1951,12 @@ fastboot:
 	fastboot_register("oem unlock", cmd_oem_unlock);
 	fastboot_register("oem device-info", cmd_oem_devinfo);
 	fastboot_register("oem log", cmd_oem_log);
+	fastboot_register("oem cpr", cmd_oem_cpr);
 	fastboot_publish("product", TARGET(BOARD));
 	fastboot_publish("kernel", "lk");
 	fastboot_publish("serialno", sn_buf);
 
-	/* The new version of fastboot protocol needs the following information to generate 
+	/* The new version of fastboot protocol needs the following information to generate
 	 *  an empty ext4 image when using 'fastboot -w'.
 	 */
 #if _EMMC_BOOT
