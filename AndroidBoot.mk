@@ -13,7 +13,9 @@ else
   ifeq ($(call is-board-platform,msm8660),true)
     BOOTLOADER_PLATFORM := msm8660_surf
   else
-    BOOTLOADER_PLATFORM := $(TARGET_BOARD_PLATFORM)
+    #BOOTLOADER_PLATFORM := $(TARGET_BOARD_PLATFORM)
+    #linxc modified for targe build 2012-12-25
+    BOOTLOADER_PLATFORM := $(TARGET_PRODUCT)
   endif
 endif
 

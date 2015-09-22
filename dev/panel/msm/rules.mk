@@ -19,5 +19,7 @@ OBJS += \
 	$(LOCAL_DIR)/mipi_nt35510_video_wvga.o \
 	$(LOCAL_DIR)/mipi_nt35510_cmd_wvga.o \
 	$(LOCAL_DIR)/mipi_hx8389b.o \
-	$(LOCAL_DIR)/mipi_hx8389b_video_qhd.o
+	$(LOCAL_DIR)/mipi_hx8389b_video_qhd.o \
+	$(LOCAL_DIR)/mipi_novatek_sharp.o \
+	$(LOCAL_DIR)/mipi_novatek_sharp_cmd_qhd.o
 endif

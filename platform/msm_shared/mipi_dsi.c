@@ -41,6 +41,13 @@
 #include <err.h>
 #include <msm_panel.h>
 
+
+#include <mipi_novatek_sharp_cmd_qhd.h>		//add by linxc
+#include <platform.h>		//add by linxc
+
+#include <mipi_nt35516_novatek_cmd_qhd.h>	// added by hjl 2012-1229
+
+
 extern void mdp_disable(void);
 extern int mipi_dsi_cmd_config(struct fbcon_config mipi_fb_cfg,
 			       unsigned short num_of_lanes);
@@ -254,6 +261,31 @@ static uint32_t mipi_novatek_manufacture_id(void)
 	return data;
 }
 
+  //linxc 2013-01-07 for auto panel
+#if DISPLAY_MIPI_CMD_PANEL_NOVATEK_SHARP_QHD
+//ref DSI_Specification  DCS Short Read Response , Packet composition is the Data Identifier (DI) byte,
+//two bytes of payload data and an ECC byte,  The number of valid bytes is indicated by the Data Type LSBs, 
+//DT bits [1:0]. DT = 10 0001 indicates one byte .
+// For a single-byte read response, valid data shall be returned in the first (LS) byte, and the second (MS) byte shall be sent as 00h. 
+static uint16_t mipi_d9_novatek_panel_id(void)
+{
+	char rec_buf[16];
+	char *rp = rec_buf;
+	uint16_t *lp, data;
+
+	mipi_dsi_cmds_tx(&novatek_d9_panel_manufacture_id_cmd, 1);
+	mipi_dsi_cmds_rx(&rp, 2);		
+
+	lp = (uint16_t *) rp;
+	data = (uint16_t) * lp;
+	data = data >> 8;
+
+	dprintf(SPEW, "linxc: manufacture id = 0x%x, lp = %x\n", data, *lp);
+
+	return data;	
+}
+#endif
+
 int mipi_dsi_panel_initialize(struct mipi_dsi_panel_config *pinfo)
 {
 	unsigned char DMA_STREAM1 = 0;	// for mdp display processor path
@@ -265,6 +297,9 @@ int mipi_dsi_panel_initialize(struct mipi_dsi_panel_config *pinfo)
 	unsigned short WC1 = 0;	// for non embedded mode only
 	int status = 0;
 	unsigned char DLNx_EN;
+#if DISPLAY_MIPI_CMD_PANEL_NOVATEK_SHARP_QHD
+	uint16_t D9_panel_id;
+#endif		
 
 	switch (pinfo->num_of_lanes) {
 	default:
@@ -295,10 +330,52 @@ int mipi_dsi_panel_initialize(struct mipi_dsi_panel_config *pinfo)
 	       | PACK_TYPE1 << 24 | VC1 << 22 | DT1 << 16 | WC1,
 	       DSI_COMMAND_MODE_DMA_CTRL);
 
+    //linxc 2013-01-07 for auto panel	
+#if DISPLAY_MIPI_CMD_PANEL_NOVATEK_SHARP_QHD 
+    mipi_dsi_cmds_tx(novatek_nt35516_test_cmd, ARRAY_SIZE(novatek_nt35516_test_cmd));
+    mdelay(5);
+
+    mipi_dsi_cmd_bta_sw_trigger();
+    D9_panel_id = mipi_d9_novatek_panel_id();  	
+#endif    
+
 	if (pinfo->panel_cmds)
 		status = mipi_dsi_cmds_tx(pinfo->panel_cmds,
 					  pinfo->num_of_panel_cmds);
 
+#if DISPLAY_MIPI_CMD_PANEL_NOVATEK_SHARP_QHD //modified also support SUCCESS Panel
+
+	mipi_dsi_cmds_tx(novatek_nt35516_exit_sleep_mode_cmd, ARRAY_SIZE(novatek_nt35516_exit_sleep_mode_cmd));
+	mdelay(120);
+	
+	if(D9_panel_id== 0x22)		//Sharp id REG DAH
+	{
+    		dprintf(SPEW, "mipi_dsi_cmds_tx  display on sharp panel \n");	
+		mipi_dsi_cmds_tx(novatek_sharp_panel_display_on_cmd, ARRAY_SIZE(novatek_sharp_panel_display_on_cmd));
+	}	
+	else
+	{
+    		dprintf(SPEW, "mipi_dsi_cmds_tx  display on for success panel \n");	
+		mipi_dsi_cmds_tx(novatek_success_panel_display_on_cmd, ARRAY_SIZE(novatek_success_panel_display_on_cmd));	
+	}
+	
+//	mdelay(50);	
+	
+	dprintf(SPEW, "mipi_dsi_panel_initialize() done\n");	
+#endif	
+/* added begin by hjl 2012-1229 */
+#if DISPLAY_MIPI_CMD_PANEL_NT35516_NOVATEK_QHD 
+	mipi_dsi_cmds_tx(nt35516_novatek_exit_sleep_mode_cmd, ARRAY_SIZE(nt35516_novatek_exit_sleep_mode_cmd));
+	mdelay(120);
+	if(board_hw_version() ==  HW_VERSION(1, 0)){
+		mipi_dsi_cmds_tx(nt35516_novatek_display_on_cmd, ARRAY_SIZE(nt35516_novatek_display_on_cmd));
+		 }else if(board_hw_version() ==  HW_VERSION(2, 0)) {
+			mipi_dsi_cmds_tx(nt35516_novatek_v2_display_on_cmd, ARRAY_SIZE(nt35516_novatek_v2_display_on_cmd));
+			  }
+		mdelay(50);
+	dprintf(SPEW, "mipi_dsi_panel_initialize() done\n");
+#endif
+/* added end by hjl 2012-1229 */
 	return status;
 }
 
@@ -586,9 +663,13 @@ struct fbcon_config *mipi_init(void)
 		dprintf(CRITICAL, "Panel info is null\n");
 		return NULL;
 	}
+	
+	dprintf(SPEW, "linxc: mipi_dsi  mipi_init\n");
 
 	/* Enable MMSS_AHB_ARB_MATER_PORT_E for arbiter master0 and master 1 request */
-#if (!DISPLAY_MIPI_PANEL_RENESAS)
+#if (!DISPLAY_MIPI_PANEL_RENESAS)\
+      && (!DISPLAY_MIPI_CMD_PANEL_NOVATEK_SHARP_QHD)\
+      &&(!DISPLAY_MIPI_CMD_PANEL_NT35516_NOVATEK_QHD)
 	writel(0x00001800, MMSS_SFPB_GPREG);
 #endif
 
@@ -632,9 +713,13 @@ int mipi_config(struct msm_fb_panel_data *panel)
 	mipi_pinfo.num_of_panel_cmds = pinfo->mipi.num_of_panel_cmds;
 	mipi_pinfo.lane_swap = pinfo->mipi.lane_swap;
 
+	dprintf(SPEW, "linxc: mipi_dsi  mipi_config\n");
+
 	/* Enable MMSS_AHB_ARB_MATER_PORT_E for
 	   arbiter master0 and master 1 request */
-#if (!DISPLAY_MIPI_PANEL_RENESAS)
+#if (!DISPLAY_MIPI_PANEL_RENESAS)\
+      && (!DISPLAY_MIPI_CMD_PANEL_NOVATEK_SHARP_QHD)\
+      &&(!DISPLAY_MIPI_CMD_PANEL_NT35516_NOVATEK_QHD)
 	writel(0x00001800, MMSS_SFPB_GPREG);
 #endif
 
